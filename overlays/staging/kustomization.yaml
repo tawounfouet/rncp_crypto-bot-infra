@@ -34,3 +34,13 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/image
         value: registry.gitlab.com/dst_crypto/crypto-bot/frontend:staging
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: ENVIRONMENT
+          value: staging
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: APP_VERSION
+          value: staging

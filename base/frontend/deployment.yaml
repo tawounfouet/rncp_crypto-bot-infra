@@ -30,7 +30,8 @@ spec:
             capabilities:
               drop: ["ALL"]
             readOnlyRootFilesystem: false
-          command: ["streamlit", "run", "src/page/app.py",
+          imagePullPolicy: Always
+          command: ["streamlit", "run", "src/navigation.py",
             "--server.port=8501", "--server.address=0.0.0.0",
             "--server.headless=true", "--server.enableCORS=false",
             "--server.enableXsrfProtection=false"]
