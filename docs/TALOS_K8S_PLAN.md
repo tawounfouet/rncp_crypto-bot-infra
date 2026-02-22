@@ -639,7 +639,8 @@ ton laptop en pointant vers les IPs Tailscale des noeuds du cluster.
 | talos-worker1 | 101 | Worker | 4 | 10 GB | 50 GB | vmbr1 |
 | talos-worker2 | 102 | Worker | 4 | 10 GB | 50 GB | vmbr1 |
 
-Note : specs initiales reduites, augmentables a chaud via Proxmox si besoin.
+Note : specs initiales reduites par rapport au budget cible (section 3).
+Augmentables a chaud via Proxmox si besoin (RAM cible : CP 8 GB, Workers 20 GB).
 
 Pour chaque VM :
 - OS : Other (Talos n'est pas dans la liste)

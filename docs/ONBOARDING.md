@@ -91,13 +91,21 @@ Demande le fichier `kubeconfig` a l'admin du cluster. Place-le dans :
 ```bash
 mkdir -p ~/.kube
 # Copier le fichier kubeconfig fourni par l'admin
-cp kubeconfig ~/.kube/config-crypto-bot
+cp kubeconfig ~/.kube/kubeconfig_cryptobot.yaml
 ```
 
-### 3.2 Lancer le tunnel SSH
+### 3.2 Acces reseau au cluster
 
-Le tunnel redirige le port 6443 local vers l'API Kubernetes a travers le Proxmox.
-**Il doit rester actif tant que tu utilises kubectl.**
+Le cluster K8s est sur un reseau isole (10.10.0.0/24) derriere le Proxmox.
+
+**Methode principale — Tailscale (recommande)** :
+
+1. Installe Tailscale : https://tailscale.com/download
+2. Connecte-toi au tailnet de l'equipe (demande l'invitation a l'admin)
+3. Active l'acceptation des routes : `tailscale up --accept-routes`
+4. Le reseau 10.10.0.0/24 est directement accessible, pas besoin de tunnel
+
+**Methode alternative — Tunnel SSH (si pas de Tailscale)** :
 
 ```bash
 ssh -L 6443:10.10.0.125:6443 -N <ton_user>@192.168.250.241
@@ -105,13 +113,14 @@ ssh -L 6443:10.10.0.125:6443 -N <ton_user>@192.168.250.241
 
 > Lance cette commande dans un terminal dedie (elle reste ouverte).
 > `-N` = pas de shell, juste le tunnel.
+> Avec cette methode, remplace `10.10.0.125` par `127.0.0.1` dans le kubeconfig.
 
 ### 3.3 Configurer kubectl
 
 Ajoute dans ton `~/.bashrc` ou `~/.zshrc` :
 
 ```bash
-export KUBECONFIG="$HOME/.kube/config-crypto-bot"
+export KUBECONFIG="$HOME/.kube/kubeconfig_cryptobot.yaml"
 alias kbot='kubectl --context admin@crypto-bot'
 ```
 
@@ -176,17 +185,23 @@ alias kbot-secrets-prod='kbot get secret crypto-bot-secrets -n production -o jso
 
 ---
 
-## 5. Acces distant (hors LAN) — Tailscale
+## 5. Acces reseau — Details Tailscale
 
-Si tu n'es pas sur le meme reseau que le Proxmox (travail a distance), utilise Tailscale :
+Tailscale est installe sur le Proxmox et annonce le subnet `10.10.0.0/24`.
+Cela permet d'acceder directement aux noeuds K8s et aux IPs MetalLB depuis
+n'importe quel appareil connecte au tailnet, sans tunnel SSH.
 
-1. Installe Tailscale : https://tailscale.com/download
-2. Connecte-toi au tailnet de l'equipe (demande l'invitation a l'admin)
-3. Utilise l'IP Tailscale du Proxmox a la place de `192.168.250.241` :
-
+Configuration sur le Proxmox (deja fait, a refaire si reinstallation) :
 ```bash
-ssh -L 6443:10.10.0.125:6443 -N <ton_user>@<IP_TAILSCALE_PROXMOX>
+tailscale up --advertise-routes=10.10.0.0/24 --accept-routes
 ```
+
+Configuration sur chaque poste client :
+```bash
+tailscale up --accept-routes
+```
+
+Puis approuver les routes dans la console Tailscale (login.tailscale.com → Machines → pve1 → Edit route settings).
 
 ---
 
@@ -359,18 +374,17 @@ Un script lance tous les port-forwards d'un namespace en une seule commande :
 ```
 
 Ctrl+C arrete tous les port-forwards d'un coup.
+Chaque environnement utilise des ports locaux differents, ce qui permet de lancer
+plusieurs environnements en parallele (un terminal par environnement).
 
-Une fois lance, les services sont accessibles sur :
-
-| Service | URL / Adresse | Description |
-|---------|---------------|-------------|
-| Frontend | http://localhost:8501 | App Streamlit |
-| Backend API | http://localhost:8009/api/v1/docs | Swagger UI (doc interactive) |
-| Backend Health | http://localhost:8009/health | Health check |
-| PostgreSQL | `localhost:5432` | Client SQL (psql, DBeaver...) |
-| MongoDB | `localhost:27017` | Client Mongo (mongosh, Compass...) |
-| MinIO Console | http://localhost:9001 | Interface web MinIO |
-| MinIO API | `localhost:9000` | Endpoint S3 |
+| Service | Dev | Staging | Production |
+|---------|-----|---------|------------|
+| Frontend | localhost:8501 | localhost:8601 | localhost:8701 |
+| Backend API | localhost:8009 | localhost:8109 | localhost:8209 |
+| PostgreSQL | localhost:5432 | localhost:5532 | localhost:5632 |
+| MongoDB | localhost:27017 | localhost:27117 | localhost:27217 |
+| MinIO API | localhost:9000 | localhost:9100 | localhost:9200 |
+| MinIO Console | localhost:9001 | localhost:9101 | localhost:9201 |
 
 > **Note** : PostgreSQL et MongoDB ne sont **pas** des services HTTP.
 > N'essayez pas d'y acceder via un navigateur — utilisez un client dedie.
@@ -393,9 +407,13 @@ kbot port-forward -n dev svc/minio 9000:9000 9001:9001
 psql -h 127.0.0.1 -p 5432 -U <POSTGRES_USER> -d crypto_bot_db
 ```
 
-**MongoDB** (`mongo`, mongosh, Compass, Studio 3T) :
+**MongoDB** (`mongo`, `mongosh`, Compass, Studio 3T) :
 ```bash
+# mongo:4.4 utilise le client "mongo" (mongosh n'est pas inclus)
 mongo -u <MONGODB_USER> -p <MONGODB_PWD> --authenticationDatabase admin 127.0.0.1:27017
+
+# Si mongosh est installe localement
+mongosh "mongodb://<MONGODB_USER>:<MONGODB_PWD>@127.0.0.1:27017/admin"
 ```
 
 **MinIO** : ouvrir http://localhost:9001 (console web)
