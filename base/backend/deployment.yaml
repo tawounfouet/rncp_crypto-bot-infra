@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crypto-bot-backend
+  labels:
+    app: crypto-bot-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crypto-bot-backend
+  template:
+    metadata:
+      labels:
+        app: crypto-bot-backend
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      imagePullSecrets:
+        - name: gitlab-registry
+      containers:
+        - name: backend
+          image: registry.gitlab.com/dst_crypto/crypto-bot/backend:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: false
+          ports:
+            - containerPort: 8009
+          env:
+            - name: MONGODB_HOST
+              value: mongo
+            - name: MONGODB_PORT
+              value: "27017"
+            - name: POSTGRES_HOST
+              value: postgres
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_DB
+              value: crypto_bot_db
+            - name: MINIO_ENDPOINT
+              value: minio:9000
+            - name: MINIO_SECURE
+              value: "0"
+            - name: MINIO_BUCKET
+              value: crypto-bot-data
+          envFrom:
+            - secretRef:
+                name: crypto-bot-secrets
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8009
+            initialDelaySeconds: 40
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8009
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"

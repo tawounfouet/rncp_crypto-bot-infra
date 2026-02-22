@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crypto-bot-frontend
+  labels:
+    app: crypto-bot-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crypto-bot-frontend
+  template:
+    metadata:
+      labels:
+        app: crypto-bot-frontend
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      imagePullSecrets:
+        - name: gitlab-registry
+      containers:
+        - name: frontend
+          image: registry.gitlab.com/dst_crypto/crypto-bot/frontend:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: false
+          ports:
+            - containerPort: 8501
+          env:
+            - name: API_URL
+              value: http://crypto-bot-backend:8009
+          livenessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: 8501
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: 8501
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"

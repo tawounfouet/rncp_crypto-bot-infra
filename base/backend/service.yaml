@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: crypto-bot-backend
+spec:
+  selector:
+    app: crypto-bot-backend
+  ports:
+    - port: 8009
+      targetPort: 8009

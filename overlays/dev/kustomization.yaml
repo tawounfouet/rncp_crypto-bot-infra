@@ -1,0 +1,36 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: dev
+
+resources:
+  - ../../base
+  - ingress.yaml
+  - secrets.yaml
+
+patches:
+  - target:
+      kind: Deployment
+      name: crypto-bot-backend
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: registry.gitlab.com/dst_crypto/crypto-bot/backend:dev
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: ENVIRONMENT
+          value: development
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: DEBUG
+          value: "true"
+
+  - target:
+      kind: Deployment
+      name: crypto-bot-frontend
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: registry.gitlab.com/dst_crypto/crypto-bot/frontend:dev

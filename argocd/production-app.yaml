@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: crypto-bot-production
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://gitlab.com/dst_crypto/crypto-bot-infra.git
+    targetRevision: main
+    path: overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: production
+  syncPolicy:
+    # Pas de automated : sync manuel pour la production
+    syncOptions:
+      - CreateNamespace=true

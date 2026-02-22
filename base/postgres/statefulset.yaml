@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      # postgres:14 demarre en root pour l'init (gosu), puis drop vers uid 999
+      # runAsNonRoot impossible sans image custom — baseline OK, restricted partiel
+      securityContext:
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres
+          image: postgres:14
+          securityContext:
+            allowPrivilegeEscalation: true   # requis: postgres entrypoint utilise gosu
+            capabilities:
+              drop: ["ALL"]
+              add: ["CHOWN", "FOWNER", "SETUID", "SETGID", "DAC_OVERRIDE"]
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: crypto_bot_db
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: crypto-bot-secrets
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: crypto-bot-secrets
+                  key: POSTGRES_PWD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
