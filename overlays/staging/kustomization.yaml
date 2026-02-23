@@ -29,7 +29,7 @@ patches:
       - op: add
         path: /spec/template/metadata/annotations
         value:
-          deployed-commit: "initial"
+          deployed-commit: "af79e923"
 
   - target:
       kind: Deployment
@@ -51,4 +51,4 @@ patches:
       - op: add
         path: /spec/template/metadata/annotations
         value:
-          deployed-commit: "initial"
+          deployed-commit: "af79e923"
