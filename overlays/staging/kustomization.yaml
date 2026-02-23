@@ -26,6 +26,10 @@ patches:
         value:
           name: DEBUG
           value: "true"
+      - op: add
+        path: /spec/template/metadata/annotations
+        value:
+          deployed-commit: "initial"
 
   - target:
       kind: Deployment
@@ -44,3 +48,7 @@ patches:
         value:
           name: APP_VERSION
           value: staging
+      - op: add
+        path: /spec/template/metadata/annotations
+        value:
+          deployed-commit: "initial"

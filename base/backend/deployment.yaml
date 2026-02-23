@@ -25,6 +25,7 @@ spec:
       containers:
         - name: backend
           image: registry.gitlab.com/dst_crypto/crypto-bot/backend:latest
+          imagePullPolicy: Always
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

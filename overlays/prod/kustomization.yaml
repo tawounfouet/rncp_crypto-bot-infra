@@ -26,6 +26,10 @@ patches:
         value:
           name: DEBUG
           value: "false"
+      - op: add
+        path: /spec/template/metadata/annotations
+        value:
+          deployed-commit: "initial"
 
   - target:
       kind: Deployment
@@ -39,3 +43,7 @@ patches:
         value:
           name: ENVIRONMENT
           value: production
+      - op: add
+        path: /spec/template/metadata/annotations
+        value:
+          deployed-commit: "initial"
