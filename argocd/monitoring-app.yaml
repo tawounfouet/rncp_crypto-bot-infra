@@ -25,6 +25,9 @@ spec:
                 label: grafana_dashboard
           promtail:
             enabled: true
+            config:
+              clients:
+                - url: http://monitoring-loki:3100/loki/api/v1/push
             tolerations:
               - effect: NoSchedule
                 key: node-role.kubernetes.io/master
