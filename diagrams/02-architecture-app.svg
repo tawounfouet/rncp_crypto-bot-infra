@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="790" height="860" viewBox="30 10 790 860">
+<style>text { font-family: "Segoe UI", Arial, sans-serif; }</style>
+<rect x="30" y="10" width="790" height="860" fill="#ffffff"/>
+<rect x="280" y="30" width="160" height="50" rx="8" fill="#e9ecef" stroke="#495057" stroke-width="2"/>
+<rect x="230" y="130" width="260" height="50" rx="8" fill="#b2f2bb" stroke="#087f5b" stroke-width="2"/>
+<rect x="100" y="230" width="520" height="100" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
+<rect x="120" y="270" width="200" height="50" rx="8" fill="#ffe3e3" stroke="#e03131" stroke-width="2"/>
+<rect x="400" y="270" width="200" height="50" rx="8" fill="#c3fae8" stroke="#087f5b" stroke-width="2"/>
+<rect x="340" y="380" width="270" height="80" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
+<rect x="350" y="405" width="80" height="40" rx="8" fill="#d0ebff" stroke="#1971c2" stroke-width="2"/>
+<rect x="440" y="405" width="80" height="40" rx="8" fill="#d0ebff" stroke="#1971c2" stroke-width="2"/>
+<rect x="530" y="405" width="70" height="40" rx="8" fill="#d0ebff" stroke="#1971c2" stroke-width="2"/>
+<rect x="340" y="500" width="270" height="80" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
+<rect x="350" y="525" width="80" height="40" rx="8" fill="#fff3bf" stroke="#e67700" stroke-width="2"/>
+<rect x="440" y="525" width="80" height="40" rx="8" fill="#fff3bf" stroke="#e67700" stroke-width="2"/>
+<rect x="530" y="525" width="70" height="40" rx="8" fill="#fff3bf" stroke="#e67700" stroke-width="2"/>
+<rect x="340" y="620" width="270" height="80" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
+<rect x="350" y="645" width="120" height="40" rx="8" fill="#e5dbff" stroke="#7048e8" stroke-width="2"/>
+<rect x="480" y="645" width="120" height="40" rx="8" fill="#e5dbff" stroke="#7048e8" stroke-width="2"/>
+<rect x="50" y="750" width="560" height="100" rx="8" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
+<rect x="70" y="780" width="150" height="55" rx="8" fill="#d0ebff" stroke="#1864ab" stroke-width="2"/>
+<rect x="250" y="780" width="150" height="55" rx="8" fill="#d3f9d8" stroke="#2b8a3e" stroke-width="2"/>
+<rect x="430" y="780" width="150" height="55" rx="8" fill="#ffe3e3" stroke="#c92a2a" stroke-width="2"/>
+<rect x="660" y="270" width="140" height="50" rx="8" fill="#fff9db" stroke="#e67700" stroke-width="2"/>
+<defs><marker id="ah_el_86" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#1e1e1e"/></marker></defs>
+<polyline points="360,80 360,130" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#ah_el_86)"/>
+<defs><marker id="ah_el_87" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#1e1e1e"/></marker></defs>
+<polyline points="300,180 220,270" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#ah_el_87)"/>
+<defs><marker id="ah_el_88" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#1e1e1e"/></marker></defs>
+<polyline points="420,180 500,270" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#ah_el_88)"/>
+<defs><marker id="ah_el_89" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#1e1e1e"/></marker></defs>
+<polyline points="320,295 400,295" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#ah_el_89)"/>
+<defs><marker id="ah_el_91" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#1e1e1e"/></marker></defs>
+<polyline points="500,320 390,405" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#ah_el_91)"/>
+<defs><marker id="ah_el_92" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#1e1e1e"/></marker></defs>
+<polyline points="450,320 145,780" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#ah_el_92)"/>
+<defs><marker id="ah_el_93" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#1e1e1e"/></marker></defs>
+<polyline points="500,320 325,780" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#ah_el_93)"/>
+<defs><marker id="ah_el_94" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#1e1e1e"/></marker></defs>
+<polyline points="550,320 505,780" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#ah_el_94)"/>
+<defs><marker id="ah_el_95" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#1e1e1e"/></marker></defs>
+<polyline points="600,295 660,295" fill="none" stroke="#1e1e1e" stroke-width="2" marker-end="url(#ah_el_95)"/>
+<text x="360.0" y="59.4" font-size="16" fill="#495057" text-anchor="middle">Utilisateur</text>
+<text x="360.0" y="150.8" font-size="12" fill="#087f5b" text-anchor="middle">Ingress NGINX</text>
+<text x="360.0" y="165.8" font-size="12" fill="#087f5b" text-anchor="middle">/ -&gt; frontend  /api -&gt; backend</text>
+<text x="231.5" y="252.85" font-size="14" fill="#868e96" text-anchor="start">Application (par namespace)</text>
+<text x="220.0" y="290.1" font-size="14" fill="#e03131" text-anchor="middle">Frontend</text>
+<text x="220.0" y="307.6" font-size="14" fill="#e03131" text-anchor="middle">Streamlit :8501</text>
+<text x="500.0" y="290.1" font-size="14" fill="#087f5b" text-anchor="middle">Backend</text>
+<text x="500.0" y="307.6" font-size="14" fill="#087f5b" text-anchor="middle">FastAPI :8009</text>
+<text x="399.5" y="402.85" font-size="14" fill="#868e96" text-anchor="start">API Routers</text>
+<text x="390.0" y="428.025" font-size="11" fill="#1971c2" text-anchor="middle">/v1/auth</text>
+<text x="480.0" y="428.025" font-size="11" fill="#1971c2" text-anchor="middle">/v1/trading</text>
+<text x="565.0" y="428.025" font-size="11" fill="#1971c2" text-anchor="middle">/v1/market</text>
+<text x="417.5" y="522.85" font-size="14" fill="#868e96" text-anchor="start">Services metier</text>
+<text x="390.0" y="548.025" font-size="11" fill="#e67700" text-anchor="middle">AuthSvc</text>
+<text x="480.0" y="548.025" font-size="11" fill="#e67700" text-anchor="middle">TradingSvc</text>
+<text x="565.0" y="548.025" font-size="11" fill="#e67700" text-anchor="middle">BacktestEng</text>
+<text x="395.0" y="642.85" font-size="14" fill="#868e96" text-anchor="start">Strategies</text>
+<text x="410.0" y="668.025" font-size="11" fill="#7048e8" text-anchor="middle">Moving Avg</text>
+<text x="540.0" y="668.025" font-size="11" fill="#7048e8" text-anchor="middle">RSI / Bollinger</text>
+<text x="244.5" y="772.85" font-size="14" fill="#868e96" text-anchor="start">Donnees persistantes — StatefulSets + PVC</text>
+<text x="145.0" y="803.3" font-size="12" fill="#1864ab" text-anchor="middle">PostgreSQL 14</text>
+<text x="145.0" y="818.3" font-size="12" fill="#1864ab" text-anchor="middle">:5432 — 5Gi</text>
+<text x="325.0" y="803.3" font-size="12" fill="#2b8a3e" text-anchor="middle">MongoDB 4.4</text>
+<text x="325.0" y="818.3" font-size="12" fill="#2b8a3e" text-anchor="middle">:27017 — 5Gi</text>
+<text x="505.0" y="803.3" font-size="12" fill="#c92a2a" text-anchor="middle">MinIO</text>
+<text x="505.0" y="818.3" font-size="12" fill="#c92a2a" text-anchor="middle">:9000 — 10Gi</text>
+<text x="730.0" y="298.85" font-size="14" fill="#e67700" text-anchor="middle">Binance API</text>
+<text x="360.0" y="299.35" font-size="14" fill="#1e1e1e" text-anchor="middle">API call</text>
+</svg>

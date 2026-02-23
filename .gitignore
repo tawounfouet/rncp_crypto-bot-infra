@@ -1,0 +1,6 @@
+# Generated images (SVG is committed, PNG is local only)
+diagrams/*.png
+
+# Diagram scripts (local tooling)
+diagrams/generate.py
+diagrams/export.py

@@ -1,5 +1,9 @@
 # Onboarding Equipe — Acces au Cluster Kubernetes
 
+> Pour comprendre l'architecture globale du projet, voir [ARCHITECTURE.md](ARCHITECTURE.md).
+
+![Infrastructure K8s](../diagrams/03-infra-k8s.svg)
+
 ## Prerequis
 
 Chaque membre de l'equipe doit installer **kubectl** et disposer du **kubeconfig** + acces SSH au Proxmox.

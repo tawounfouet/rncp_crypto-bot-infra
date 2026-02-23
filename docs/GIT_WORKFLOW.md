@@ -1,8 +1,10 @@
 # Git Workflow - Crypto-Bot
-# =========================
-# Sync bidirectionnel entre les 3 repos applicatifs
 
-## Repos
+Sync bidirectionnel entre les 3 repos applicatifs.
+
+## Organisation des repos
+
+![Organisation des repos](../diagrams/05-repos-organisation.svg)
 
 | Repo | Contenu | CI |
 |------|---------|-----|
@@ -11,6 +13,9 @@
 | **frontend** | Code Streamlit (submodule de crypto-bot) | Lint + Sync parent |
 | **crypto-bot-infra** | Manifests K8s (Kustomize, ArgoCD) | Pas de CI (ArgoCD pull) |
 
+## Pipeline CI/CD
+
+![Pipeline CI/CD](../diagrams/04-pipeline-cicd.svg)
 
 ## Branches
 
