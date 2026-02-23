@@ -1,0 +1,51 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    # Source 1 : Helm chart loki-stack (Loki + Promtail + Grafana)
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: loki-stack
+      targetRevision: 2.10.3
+      helm:
+        valuesObject:
+          loki:
+            persistence:
+              enabled: true
+              storageClassName: local-path
+              size: 5Gi
+          grafana:
+            enabled: true
+            sidecar:
+              dashboards:
+                enabled: true
+                label: grafana_dashboard
+          promtail:
+            enabled: true
+            tolerations:
+              - effect: NoSchedule
+                key: node-role.kubernetes.io/master
+                operator: Exists
+              - effect: NoSchedule
+                key: node-role.kubernetes.io/control-plane
+                operator: Exists
+    # Source 2 : Extras depuis le repo Git (dashboards Grafana, etc.)
+    - repoURL: https://gitlab.com/dst_crypto/crypto-bot-infra.git
+      targetRevision: main
+      path: monitoring
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged

@@ -319,8 +319,8 @@ Mais on veut 3 noeuds (1 CP + 2 workers) sur 1 machine.
     ║  │  minio            │  │  minio            │      ║
     ║  └───────────────────┘  └───────────────────┘      ║
     ║                                                     ║
-    ║  ArgoCD │ MetalLB │ Ingress NGINX │ Prometheus     ║
-    ║  Grafana │ Sealed Secrets │ Cloudflare Tunnel      ║
+    ║  ArgoCD │ MetalLB │ Ingress NGINX │ Sealed Secrets ║
+    ║  Loki + Promtail + Grafana │ Cloudflare Tunnel     ║
     ╚════════════════════════════════════════════════════╝
 
     ┌════════════════════════════════════════════════════┐
@@ -377,7 +377,7 @@ GARANTIES :
 | Manifests | **Kustomize** | Natif kubectl, base + overlays |
 | Storage | **local-path-provisioner** | PVs sur disque local des workers |
 | Secrets | **Sealed Secrets** | Chiffres dans Git, dechiffres dans le cluster |
-| Monitoring | **Prometheus + Grafana** | Metriques cluster, dashboards |
+| Monitoring | **Loki + Promtail + Grafana** | Logs centralises (Helm chart grafana/loki-stack v2.10.3) |
 | Acces equipe | **Cloudflare Tunnel** | Outbound-only, zero port entrant, free tier |
 | Acces admin | **Tailscale** | Mesh VPN gratuit, traverse NAT |
 | VM AWS | **Nginx + docker-compose fallback** | Reverse proxy + resilience |
@@ -777,6 +777,87 @@ kubectl create namespace staging
 kubectl create namespace production
 ```
 
+#### 2.5 Sealed Secrets
+
+```bash
+# Installer le controller Sealed Secrets dans kube-system
+kubectl apply -f https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.29.0/controller.yaml
+
+# Verifier que le controller est Running
+kubectl get pods -n kube-system -l name=sealed-secrets-controller
+
+# Installer kubeseal CLI sur le poste local
+# Linux :
+KUBESEAL_VERSION=0.29.0
+curl -OL "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/kubeseal-${KUBESEAL_VERSION}-linux-amd64.tar.gz"
+tar -xvzf kubeseal-${KUBESEAL_VERSION}-linux-amd64.tar.gz kubeseal
+sudo install -m 755 kubeseal /usr/local/bin/kubeseal
+
+# Tester
+kubeseal --version
+```
+
+Usage pour chiffrer un secret :
+
+```bash
+# Creer un secret classique (ne pas l'appliquer !)
+kubectl create secret generic crypto-bot-secrets \
+  --from-literal=POSTGRES_USER=postgres \
+  --from-literal=POSTGRES_PWD=changeme \
+  --dry-run=client -o yaml > secret.yaml
+
+# Chiffrer avec kubeseal
+kubeseal --format=yaml < secret.yaml > sealed-secret.yaml
+
+# Le fichier sealed-secret.yaml peut etre commite dans Git en toute securite.
+# Seul le controller dans le cluster peut le dechiffrer.
+```
+
+#### 2.6 Monitoring : Loki + Promtail + Grafana
+
+```bash
+# Ajouter le repo Helm Grafana
+helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update
+
+# Creer le namespace monitoring (avec PodSecurity privileged pour Promtail)
+kubectl create namespace monitoring
+kubectl label ns monitoring pod-security.kubernetes.io/enforce=privileged
+
+# Installer la stack Loki (Loki + Promtail + Grafana)
+helm install loki grafana/loki-stack \
+  --namespace monitoring \
+  --set grafana.enabled=true \
+  --set loki.persistence.enabled=true \
+  --set loki.persistence.size=5Gi \
+  --version 2.10.3
+
+# Verifier les pods (5 attendus : loki-0, grafana, 3x promtail)
+kubectl get pods -n monitoring
+
+# Recuperer le mot de passe Grafana
+kubectl get secret loki-grafana -n monitoring -o jsonpath="{.data.admin-password}" | base64 -d
+
+# Acceder a Grafana (port-forward)
+kubectl port-forward svc/loki-grafana -n monitoring 3000:80
+# → http://localhost:3000, login : admin / <mot de passe ci-dessus>
+```
+
+> **Important** : le label `pod-security.kubernetes.io/enforce=privileged` sur le
+> namespace `monitoring` est **requis** pour que les pods Promtail puissent monter
+> les hostPath des logs. Sans ce label, les DaemonSets Promtail seront rejetes.
+
+Loki est pre-configure comme datasource dans Grafana. Pour voir les logs :
+1. Aller dans Explore
+2. Selectionner la datasource "Loki"
+3. Utiliser une requete LogQL, ex : `{namespace="staging"}`
+
+> **Migration GitOps (Phase 8b)** : l'installation Helm manuelle ci-dessus est remplacee par
+> une ArgoCD Application multi-source (`argocd/monitoring-app.yaml`). ArgoCD deploie le meme
+> chart Helm loki-stack + un dashboard Grafana provisionne automatiquement via ConfigMap.
+> Transition : `helm uninstall loki -n monitoring` puis ArgoCD recree tout.
+> Voir `monitoring/` dans le repo pour les extras (dashboards).
+
 ---
 
 ### Phase 3 : Repo GitOps crypto-bot-infra (jour 3-5)
@@ -825,9 +906,14 @@ crypto-bot-infra/
 │       ├── ingress.yaml
 │       └── secrets.yaml
 │
+├── monitoring/                        # Extras monitoring (dashboards Grafana)
+│   ├── kustomization.yaml
+│   └── grafana-dashboard-crypto-bot.yaml
+│
 └── argocd/
     ├── staging-app.yaml             # ArgoCD Application (auto-sync)
-    └── production-app.yaml          # ArgoCD Application (sync manuel)
+    ├── production-app.yaml          # ArgoCD Application (sync manuel)
+    └── monitoring-app.yaml          # ArgoCD Application monitoring (Helm + extras)
 ```
 
 #### 3.3 Exemples de manifests cles
@@ -1190,21 +1276,47 @@ update:manifests:
       git config user.email "ci@crypto-bot.gitlab.com"
       git config user.name "GitLab CI"
 
-      cd overlays/staging
-      sed -i "s|backend:.*|backend:${CI_COMMIT_SHA}|g" kustomization.yaml
-      sed -i "s|frontend:.*|frontend:${CI_COMMIT_SHA}|g" kustomization.yaml
+      # Determine le tag semantique selon le contexte
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        TAG="${CI_COMMIT_TAG}"      # ex: v1.1
+        OVERLAY="prod"
+      else
+        TAG="staging"
+        OVERLAY="staging"
+      fi
+
+      cd overlays/${OVERLAY}
+      sed -i "s|backend:.*|backend:${TAG}|g" kustomization.yaml
+      sed -i "s|frontend:.*|frontend:${TAG}|g" kustomization.yaml
 
       git add .
-      git commit -m "ci: update staging images to ${CI_COMMIT_SHA}"
+      git commit -m "ci: update ${OVERLAY} images to ${TAG}"
       git push origin main
   rules:
     - if: $CI_COMMIT_BRANCH == "staging"
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+/
   variables:
     INFRA_DEPLOY_TOKEN: $INFRA_DEPLOY_TOKEN
 ```
 
-Note : l'ancien deploy SSH vers la VM AWS est supprime du pipeline principal.
-Le docker-compose sur la VM ne sert plus que de fallback (demarre manuellement).
+Note : la CI utilise des tags semantiques (`:staging`, `:vX.X`) et jamais de SHA.
+ArgoCD detecte le changement dans le repo infra et synchronise le cluster.
+Le deploy SSH vers la VM AWS est maintenu comme fallback (docker-compose).
+
+#### 5.2 Sync bidirectionnel entre les repos
+
+Les 3 repos applicatifs (crypto-bot, backend, frontend) se synchronisent
+automatiquement via la CI. Voir `docs/GIT_WORKFLOW.md` pour le detail.
+
+Resume :
+- Push sur **backend** ou **frontend** → CI lance `sync:parent` → met a jour
+  le pointer submodule dans crypto-bot (commit `ci(backend): ...`)
+- Push sur **crypto-bot** → CI lance `sync:submodules` → push les commits
+  referencies vers backend/frontend
+- **Anti-boucle** : tout commit dont le message commence par `ci(` est ignore
+  par les jobs de sync.
+- Variable **GROUP_PAT_TOKEN** : PAT au niveau du groupe `dst_crypto`, scope
+  `write_repository`, accessible par les 3 repos sans duplication.
 
 ---
 
@@ -1357,6 +1469,42 @@ echo "=== Mode normal retabli ==="
 ```
 
 
+### Phase 9 : GitLab Runner self-hosted (optionnel)
+
+Deployer un GitLab Runner sur le Proxmox ou dans le cluster K8s pour executer
+les pipelines CI/CD en local (au lieu des shared runners GitLab.com).
+
+**Avantages** :
+- Builds Docker plus rapides (images cachees localement)
+- Pas de limite de minutes CI/CD
+- Push vers le registry plus rapide (meme reseau)
+
+```bash
+# Option A : Runner Docker sur le Proxmox host
+# Creer une VM ou LXC legere dediee au runner
+docker run -d --name gitlab-runner --restart always \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v gitlab-runner-config:/etc/gitlab-runner \
+  gitlab/gitlab-runner:latest
+
+docker exec -it gitlab-runner gitlab-runner register \
+  --url https://gitlab.com \
+  --token <RUNNER_REGISTRATION_TOKEN> \
+  --executor docker \
+  --docker-image docker:latest \
+  --docker-privileged
+
+# Option B : Runner dans le cluster K8s (executor kubernetes)
+helm repo add gitlab https://charts.gitlab.io
+helm install gitlab-runner gitlab/gitlab-runner \
+  --namespace gitlab-runner --create-namespace \
+  --set gitlabUrl=https://gitlab.com \
+  --set runnerRegistrationToken=<TOKEN> \
+  --set runners.privileged=true
+```
+
+> Pour obtenir le token : GitLab > Groupe `dst_crypto` > Settings > CI/CD > Runners > New group runner.
+
 ---
 
 
@@ -1377,7 +1525,14 @@ echo "=== Mode normal retabli ==="
 - [ ] MetalLB installe (plage 10.10.0.240-250)
 - [ ] Ingress NGINX installe
 - [ ] local-path-provisioner installe
-- [ ] Namespaces staging + production crees
+- [ ] Label `pod-security.kubernetes.io/enforce=privileged` sur ns `local-path-storage`
+- [ ] Sealed Secrets controller installe (ns kube-system)
+- [ ] kubeseal CLI installe sur le poste local
+- [ ] Loki + Promtail + Grafana installes (ns monitoring, Helm chart loki-stack)
+- [ ] Label `pod-security.kubernetes.io/enforce=privileged` sur ns `monitoring`
+- [ ] Monitoring gere par ArgoCD (argocd/monitoring-app.yaml, multi-source Helm + Kustomize)
+- [ ] Dashboard Grafana provisionne automatiquement (monitoring/grafana-dashboard-crypto-bot.yaml)
+- [ ] Namespaces dev + staging + production crees
 - [ ] Repo `crypto-bot-infra` complete (tous les YAML remplis)
 - [ ] Bug overlay prod corrige (`:production`, `DEBUG=false`)
 
@@ -1386,8 +1541,10 @@ echo "=== Mode normal retabli ==="
 - [ ] ArgoCD installe, UI accessible
 - [ ] Repo GitLab connecte a ArgoCD (deploy token)
 - [ ] Applications staging (auto-sync) + production (sync manuel) deployees
-- [ ] Pipeline GitLab CI : stage `update-manifests` fonctionnel
-- [ ] ImagePullSecrets crees dans les deux namespaces
+- [ ] Pipeline GitLab CI : tags semantiques (:staging, :production, :vX.X)
+- [ ] Sync bidirectionnel configure (sync:parent + sync:submodules + anti-boucle)
+- [ ] GROUP_PAT_TOKEN configure au niveau du groupe dst_crypto
+- [ ] ImagePullSecrets crees dans les trois namespaces (dev, staging, production)
 
 ### Checklist Phase 6-7 : Tunnel + Fallback
 
@@ -1456,5 +1613,6 @@ echo "=== Mode normal retabli ==="
 6. **Infra reproductible** : cluster jetable, Git est la source de verite
 7. **Resilience** : 2 workers K8s, pods reschedulables, fallback cloud
 8. **Securisation** : bridge isole, RBAC, Sealed Secrets, Cloudflare Tunnel, zero port entrant
-9. **Optimisation des couts** : 97.5% d'economie vs full cloud AWS
-10. **Presentation RSI** : document d'architecture pour justifier l'usage du serveur
+9. **Monitoring** : Loki + Promtail + Grafana pour les logs centralises de tous les pods
+10. **Optimisation des couts** : 97.5% d'economie vs full cloud AWS
+11. **Presentation RSI** : document d'architecture pour justifier l'usage du serveur

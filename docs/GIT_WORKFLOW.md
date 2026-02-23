@@ -77,6 +77,17 @@ flowchart TB
     CB_SYNC -->|"push commits"| FE
     CB_BUILD --> CB_DEPLOY
 
+    subgraph K8S["Deploiement principal"]
+        ARGOCD_NODE["ArgoCD<br/>auto-sync staging<br/>sync manuel prod"]
+    end
+
+    subgraph FALLBACK["Fallback VM AWS"]
+        DOCKER["docker-compose<br/>(deploy SSH)"]
+    end
+
+    CB_BUILD -->|":staging / :production"| ARGOCD_NODE
+    CB_DEPLOY -->|"SSH deploy"| DOCKER
+
     subgraph ANTIBOUCLE["Anti-boucle"]
         RULE["commit ci(...) → skip sync"]
     end
@@ -201,6 +212,47 @@ backend merge → CI sync:parent → push "ci(backend):..." sur crypto-bot
 | Travail sur **CI/docker-compose** uniquement | `git push` | Pas de submodule a sync |
 
 
+## Exemple concret : scripts/push.sh
+
+Scenario : on a modifie le backend et le frontend depuis le repo crypto-bot.
+
+```bash
+# 1. On est dans crypto-bot/ sur la branche staging
+cd ~/Crypto-bot
+git checkout staging
+
+# 2. Modifier le backend
+cd backend
+# ... editer des fichiers ...
+git add .
+git commit -m "feat: ajouter endpoint /v1/market/history"
+
+# 3. Modifier le frontend
+cd ../frontend
+# ... editer des fichiers ...
+git add .
+git commit -m "feat: page historique marche"
+
+# 4. Revenir au parent et commiter les references submodules
+cd ..
+git add backend frontend
+git commit -m "feat: historique marche (backend + frontend)"
+
+# 5. Tout pusher d'un coup avec push.sh
+./scripts/push.sh staging
+```
+
+Ce que fait `push.sh` :
+1. `cd backend && git push origin staging` (push le submodule d'abord)
+2. `cd frontend && git push origin staging` (push le submodule d'abord)
+3. `git push origin staging` (push le parent)
+
+> **Pourquoi cet ordre ?** Si on pushait le parent en premier, la CI essaierait
+> de sync les submodules mais les commits referencies n'existeraient pas encore
+> sur le remote. En pushant les submodules d'abord, on s'assure que les SHA
+> sont deja disponibles.
+
+
 ## Variables CI requises
 
 ### Variable de GROUPE (GitLab > Groupe dst_crypto > Settings > CI/CD > Variables)
@@ -211,6 +263,26 @@ backend merge → CI sync:parent → push "ci(backend):..." sur crypto-bot
 
 > Un seul PAT, configure une seule fois au niveau du groupe.
 > Accessible automatiquement par les 3 repos (backend, frontend, crypto-bot).
+
+### Comment creer le GROUP_PAT_TOKEN
+
+1. **Creer le PAT** : GitLab > Avatar (coin haut droit) > Edit profile > Access Tokens
+   - Name : `group-ci-sync`
+   - Expiration : 1 an max
+   - Scopes : `write_repository`, `read_registry`, `write_registry`
+   - Cliquer "Create personal access token"
+   - **Copier le token** (commence par `glpat-`, affiche une seule fois)
+
+2. **Ajouter comme variable de groupe** : GitLab > Groupe `dst_crypto` > Settings > CI/CD > Variables
+   - Key : `GROUP_PAT_TOKEN`
+   - Value : coller le PAT
+   - Type : Variable
+   - Protected : Non (sinon pas accessible sur staging)
+   - Masked : Oui
+   - Cliquer "Add variable"
+
+> Le token est maintenant accessible dans les 3 repos (backend, frontend, crypto-bot)
+> sans avoir a le configurer 3 fois.
 
 ### Variables supplementaires sur **crypto-bot** uniquement
 
