@@ -835,11 +835,11 @@ helm install loki grafana/loki-stack \
 # Verifier les pods (5 attendus : loki-0, grafana, 3x promtail)
 kubectl get pods -n monitoring
 
-# Recuperer le mot de passe Grafana
-kubectl get secret loki-grafana -n monitoring -o jsonpath="{.data.admin-password}" | base64 -d
+# Recuperer le mot de passe Grafana (SealedSecret grafana-admin)
+kubectl get secret grafana-admin -n monitoring -o jsonpath="{.data.admin-password}" | base64 -d
 
 # Acceder a Grafana (port-forward)
-kubectl port-forward svc/loki-grafana -n monitoring 3000:80
+kubectl port-forward svc/monitoring-grafana -n monitoring 3000:80
 # → http://localhost:3000, login : admin / <mot de passe ci-dessus>
 ```
 
@@ -1199,15 +1199,15 @@ kubectl -n argocd get secret argocd-initial-admin-secret \
   -o jsonpath="{.data.password}" | base64 -d
 
 # Exposer l'UI
-kubectl port-forward svc/argocd-server -n argocd 8080:443
+kubectl port-forward svc/argocd-server -n argocd 8443:443
 
-# https://localhost:8080 — Login : admin / <mot de passe>
+# https://localhost:8443 — Login : admin / <mot de passe>
 ```
 
 #### 4.3 Configurer le repo GitLab
 
 ```bash
-argocd login localhost:8080 --insecure
+argocd login localhost:8443 --insecure
 
 argocd repo add https://gitlab.com/dst_crypto/crypto-bot-infra.git \
   --username gitlab-ci-token \

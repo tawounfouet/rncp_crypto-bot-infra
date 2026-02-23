@@ -3,12 +3,14 @@
 # Lance tous les port-forwards pour un namespace donne.
 # Chaque environnement utilise des ports locaux differents pour eviter les conflits.
 #
-# Usage: ./port-forward.sh [dev|staging|production]
+# Usage: ./port-forward.sh [dev|staging|production|infra|all]
 #
 # Ports locaux :
 #   dev        → 8009/8501/5432/27017/9000/9001
 #   staging    → 8109/8601/5532/27117/9100/9101
 #   production → 8209/8701/5632/27217/9200/9201
+#   infra      → 8443 (ArgoCD) / 3000 (Grafana)
+#   all        → staging + infra
 #
 set -euo pipefail
 
@@ -17,28 +19,12 @@ CTX="admin@crypto-bot"
 
 # Validation du namespace
 case "$NS" in
-  dev|staging|production) ;;
-  *) echo "Usage: $0 [dev|staging|production]"; exit 1 ;;
+  dev|staging|production|infra|all) ;;
+  *) echo "Usage: $0 [dev|staging|production|infra|all]"; exit 1 ;;
 esac
 
-# Ports par environnement (local:remote)
-case "$NS" in
-  dev)
-    P_BACKEND=8009;  P_FRONTEND=8501
-    P_PG=5432;       P_MONGO=27017
-    P_MINIO=9000;    P_MINIOC=9001
-    ;;
-  staging)
-    P_BACKEND=8109;  P_FRONTEND=8601
-    P_PG=5532;       P_MONGO=27117
-    P_MINIO=9100;    P_MINIOC=9101
-    ;;
-  production)
-    P_BACKEND=8209;  P_FRONTEND=8701
-    P_PG=5632;       P_MONGO=27217
-    P_MINIO=9200;    P_MINIOC=9201
-    ;;
-esac
+# Tue les anciens port-forwards kubectl (evite les conflits de ports)
+pkill -f "kubectl.*port-forward.*--context.*$CTX" 2>/dev/null && sleep 1 && echo "Anciens port-forwards tues." || true
 
 # Tue les port-forwards existants au Ctrl+C
 cleanup() {
@@ -49,26 +35,79 @@ cleanup() {
 }
 trap cleanup INT TERM
 
-echo "=== Port-forward namespace: $NS ==="
-echo ""
+# --- Fonction : port-forward infra (ArgoCD + Grafana) ---
+forward_infra() {
+  echo "=== Port-forward infra ==="
+  echo ""
 
-kubectl --context "$CTX" port-forward -n "$NS" svc/crypto-bot-backend  ${P_BACKEND}:8009 &
-echo "  Backend API      → http://localhost:${P_BACKEND}/api/v1/docs"
+  kubectl --context "$CTX" port-forward -n argocd svc/argocd-server 8443:443 &
+  echo "  ArgoCD           → https://localhost:8443"
 
-kubectl --context "$CTX" port-forward -n "$NS" svc/crypto-bot-frontend ${P_FRONTEND}:8501 &
-echo "  Frontend         → http://localhost:${P_FRONTEND}"
+  kubectl --context "$CTX" port-forward -n monitoring svc/monitoring-grafana 3000:80 &
+  echo "  Grafana          → http://localhost:3000"
 
-kubectl --context "$CTX" port-forward -n "$NS" svc/postgres            ${P_PG}:5432 &
-echo "  PostgreSQL       → localhost:${P_PG}"
+  echo ""
+}
 
-kubectl --context "$CTX" port-forward -n "$NS" svc/mongo               ${P_MONGO}:27017 &
-echo "  MongoDB          → localhost:${P_MONGO}"
+# --- Fonction : port-forward apps (backend, frontend, DBs) ---
+forward_apps() {
+  local ns="$1"
 
-kubectl --context "$CTX" port-forward -n "$NS" svc/minio               ${P_MINIO}:9000 ${P_MINIOC}:9001 &
-echo "  MinIO API        → localhost:${P_MINIO}"
-echo "  MinIO Console    → http://localhost:${P_MINIOC}"
+  # Ports par environnement (local:remote)
+  case "$ns" in
+    dev)
+      P_BACKEND=8009;  P_FRONTEND=8501
+      P_PG=5432;       P_MONGO=27017
+      P_MINIO=9000;    P_MINIOC=9001
+      ;;
+    staging)
+      P_BACKEND=8109;  P_FRONTEND=8601
+      P_PG=5532;       P_MONGO=27117
+      P_MINIO=9100;    P_MINIOC=9101
+      ;;
+    production)
+      P_BACKEND=8209;  P_FRONTEND=8701
+      P_PG=5632;       P_MONGO=27217
+      P_MINIO=9200;    P_MINIOC=9201
+      ;;
+  esac
 
-echo ""
+  echo "=== Port-forward namespace: $ns ==="
+  echo ""
+
+  kubectl --context "$CTX" port-forward -n "$ns" svc/crypto-bot-backend  ${P_BACKEND}:8009 &
+  echo "  Backend API      → http://localhost:${P_BACKEND}/api/v1/docs"
+
+  kubectl --context "$CTX" port-forward -n "$ns" svc/crypto-bot-frontend ${P_FRONTEND}:8501 &
+  echo "  Frontend         → http://localhost:${P_FRONTEND}"
+
+  kubectl --context "$CTX" port-forward -n "$ns" svc/postgres            ${P_PG}:5432 &
+  echo "  PostgreSQL       → localhost:${P_PG}"
+
+  kubectl --context "$CTX" port-forward -n "$ns" svc/mongo               ${P_MONGO}:27017 &
+  echo "  MongoDB          → localhost:${P_MONGO}"
+
+  kubectl --context "$CTX" port-forward -n "$ns" svc/minio               ${P_MINIO}:9000 ${P_MINIOC}:9001 &
+  echo "  MinIO API        → localhost:${P_MINIO}"
+  echo "  MinIO Console    → http://localhost:${P_MINIOC}"
+
+  echo ""
+}
+
+# --- Lancement ---
+case "$NS" in
+  infra)
+    forward_infra
+    ;;
+  all)
+    forward_infra
+    forward_apps staging
+    ;;
+  *)
+    forward_apps "$NS"
+    ;;
+esac
+
 echo "Ctrl+C pour tout arreter."
 echo ""
 

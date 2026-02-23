@@ -360,7 +360,7 @@ Pour y acceder depuis votre poste, utilisez le **port-forward**.
 
 ### Script tout-en-un
 
-Un script lance tous les port-forwards d'un namespace en une seule commande :
+Un script lance tous les port-forwards en une seule commande :
 
 ```bash
 # Dev (par defaut)
@@ -371,20 +371,29 @@ Un script lance tous les port-forwards d'un namespace en une seule commande :
 
 # Production
 ./scripts/port-forward.sh production
+
+# Infra seulement (ArgoCD + Grafana)
+./scripts/port-forward.sh infra
+
+# Staging + Infra (recommande pour tester)
+./scripts/port-forward.sh all
 ```
 
 Ctrl+C arrete tous les port-forwards d'un coup.
+Le script tue automatiquement les anciens port-forwards avant d'en lancer de nouveaux.
 Chaque environnement utilise des ports locaux differents, ce qui permet de lancer
 plusieurs environnements en parallele (un terminal par environnement).
 
-| Service | Dev | Staging | Production |
-|---------|-----|---------|------------|
-| Frontend | localhost:8501 | localhost:8601 | localhost:8701 |
-| Backend API | localhost:8009 | localhost:8109 | localhost:8209 |
-| PostgreSQL | localhost:5432 | localhost:5532 | localhost:5632 |
-| MongoDB | localhost:27017 | localhost:27117 | localhost:27217 |
-| MinIO API | localhost:9000 | localhost:9100 | localhost:9200 |
-| MinIO Console | localhost:9001 | localhost:9101 | localhost:9201 |
+| Service | Dev | Staging | Production | Infra |
+|---------|-----|---------|------------|-------|
+| Frontend | localhost:8501 | localhost:8601 | localhost:8701 | — |
+| Backend API | localhost:8009 | localhost:8109 | localhost:8209 | — |
+| PostgreSQL | localhost:5432 | localhost:5532 | localhost:5632 | — |
+| MongoDB | localhost:27017 | localhost:27117 | localhost:27217 | — |
+| MinIO API | localhost:9000 | localhost:9100 | localhost:9200 | — |
+| MinIO Console | localhost:9001 | localhost:9101 | localhost:9201 | — |
+| ArgoCD | — | — | — | https://localhost:8443 |
+| Grafana | — | — | — | http://localhost:3000 |
 
 > **Note** : PostgreSQL et MongoDB ne sont **pas** des services HTTP.
 > N'essayez pas d'y acceder via un navigateur — utilisez un client dedie.
