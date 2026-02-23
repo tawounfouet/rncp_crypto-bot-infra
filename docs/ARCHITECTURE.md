@@ -210,6 +210,34 @@ GARANTIES :
   RTO (temps de bascule)     : ~2 min (manuel) / ~30s (automatise)
 ```
 
+### GitOps avec ArgoCD
+
+Le deploiement suit un modele **pull-based** (vrai GitOps) : le CI ne deploie jamais directement sur le cluster. Git est la source de verite.
+
+```
+PUSH sur staging
+  → GitLab CI : test → build:docker → update:manifests
+    → Commit "ci(gitops): staging rollout <sha>" dans crypto-bot-infra/main
+    → ArgoCD detecte le changement (polling 3 min)
+    → Auto-sync → rolling update backend + frontend
+
+TAG vX.X
+  → GitLab CI : test → build:docker → update:manifests
+    → Commit "ci(gitops): production vX.X (<sha>)" dans crypto-bot-infra/main
+    → ArgoCD affiche OutOfSync
+    → Sync manuel → rolling update
+```
+
+**Mecanisme** : le tag image staging est fixe (`:staging`), donc un simple push d'image ne produit aucun diff dans les manifests. Le job `update:manifests` ajoute une annotation `deployed-commit: "<sha>"` dans le pod template. Ce changement est detecte par ArgoCD et declenche un rolling update.
+
+| Application ArgoCD | Namespace | Sync | Strategie |
+|-------------------|-----------|------|-----------|
+| `crypto-bot-staging` | staging | **Auto-sync** + prune + selfHeal | Chaque commit CI declenche un rollout |
+| `crypto-bot-production` | production | **Manuel** | Review avant sync, tag versionne |
+| `monitoring` | monitoring | **Auto-sync** | Helm loki-stack + dashboards Grafana |
+
+Le namespace `dev` n'est pas gere par ArgoCD — deploiement manuel via `dev-deploy.sh`.
+
 ### Choix technologiques
 
 | Composant | Choix | Justification |

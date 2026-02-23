@@ -483,7 +483,7 @@ specifient `runAsUser: 1000` et `runAsGroup: 1000` pour satisfaire `runAsNonRoot
 |-------|-------------------|
 | Installer kubectl | `curl -LO ...` (voir section 1) |
 | Recevoir le kubeconfig | Demander a l'admin |
-| Lancer le tunnel SSH | `ssh -L 6443:10.10.0.125:6443 -N user@192.168.250.241` |
+| Activer Tailscale | `tailscale up --accept-routes` (approuver routes dans la console) |
 | Tester | `kbot get nodes` |
 | Voir les secrets | `kbot get secret crypto-bot-secrets -n staging ...` |
 | Modifier un secret | Installer kubeseal, chiffrer, commiter |

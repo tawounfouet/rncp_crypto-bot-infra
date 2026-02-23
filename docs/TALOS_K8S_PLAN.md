@@ -1164,7 +1164,7 @@ spec:
   source:
     repoURL: https://gitlab.com/dst_crypto/crypto-bot-infra.git
     targetRevision: main
-    path: overlays/production
+    path: overlays/prod
   destination:
     server: https://kubernetes.default.svc
     namespace: production
@@ -1512,44 +1512,44 @@ helm install gitlab-runner gitlab/gitlab-runner \
 
 ### Checklist Phase 0-1 : Proxmox + Cluster Talos
 
-- [ ] Bridge isole `vmbr1` cree sur Proxmox
-- [ ] ISO Talos telecharge sur le Proxmox
-- [ ] talosctl et kubectl installes
-- [ ] 3 VMs creees (CP 8GB + 2 Workers 20GB)
-- [ ] Config Talos generee et appliquee
-- [ ] Cluster bootstrap reussi
-- [ ] `kubectl get nodes` = 3 noeuds Ready
+- [x] Bridge isole `vmbr1` cree sur Proxmox
+- [x] ISO Talos telecharge sur le Proxmox
+- [x] talosctl et kubectl installes
+- [x] 3 VMs creees (CP 8GB + 2 Workers 20GB)
+- [x] Config Talos generee et appliquee
+- [x] Cluster bootstrap reussi
+- [x] `kubectl get nodes` = 3 noeuds Ready
 
 ### Checklist Phase 2-3 : Infra K8s + GitOps
 
-- [ ] MetalLB installe (plage 10.10.0.240-250)
-- [ ] Ingress NGINX installe
-- [ ] local-path-provisioner installe
-- [ ] Label `pod-security.kubernetes.io/enforce=privileged` sur ns `local-path-storage`
-- [ ] Sealed Secrets controller installe (ns kube-system)
-- [ ] kubeseal CLI installe sur le poste local
-- [ ] Loki + Promtail + Grafana installes (ns monitoring, Helm chart loki-stack)
-- [ ] Label `pod-security.kubernetes.io/enforce=privileged` sur ns `monitoring`
-- [ ] Monitoring gere par ArgoCD (argocd/monitoring-app.yaml, multi-source Helm + Kustomize)
-- [ ] Dashboard Grafana provisionne automatiquement (monitoring/grafana-dashboard-crypto-bot.yaml)
-- [ ] Namespaces dev + staging + production crees
-- [ ] Repo `crypto-bot-infra` complete (tous les YAML remplis)
-- [ ] Bug overlay prod corrige (`:production`, `DEBUG=false`)
+- [x] MetalLB installe (plage 10.10.0.240-250)
+- [x] Ingress NGINX installe
+- [x] local-path-provisioner installe
+- [x] Label `pod-security.kubernetes.io/enforce=privileged` sur ns `local-path-storage`
+- [x] Sealed Secrets controller installe (ns kube-system)
+- [x] kubeseal CLI installe sur le poste local
+- [x] Loki + Promtail + Grafana installes (ns monitoring, Helm chart loki-stack)
+- [x] Label `pod-security.kubernetes.io/enforce=privileged` sur ns `monitoring`
+- [x] Monitoring gere par ArgoCD (argocd/monitoring-app.yaml, multi-source Helm + Kustomize)
+- [x] Dashboard Grafana provisionne automatiquement (monitoring/grafana-dashboard-crypto-bot.yaml)
+- [x] Namespaces dev + staging + production crees
+- [x] Repo `crypto-bot-infra` complete (tous les YAML remplis)
+- [x] Bug overlay prod corrige (`:production`, `DEBUG=false`)
 
 ### Checklist Phase 4-5 : ArgoCD + Pipeline
 
-- [ ] ArgoCD installe, UI accessible
-- [ ] Repo GitLab connecte a ArgoCD (deploy token)
-- [ ] Applications staging (auto-sync) + production (sync manuel) deployees
-- [ ] Pipeline GitLab CI : tags semantiques (:staging, :production, :vX.X)
-- [ ] Sync bidirectionnel configure (sync:parent + sync:submodules + anti-boucle)
-- [ ] GROUP_PAT_TOKEN configure au niveau du groupe dst_crypto
-- [ ] ImagePullSecrets crees dans les trois namespaces (dev, staging, production)
+- [x] ArgoCD installe, UI accessible
+- [x] Repo GitLab connecte a ArgoCD (deploy token)
+- [x] Applications staging (auto-sync) + production (sync manuel) deployees
+- [x] Pipeline GitLab CI : tags semantiques (:staging, :production, :vX.X)
+- [x] Sync bidirectionnel configure (sync:parent + sync:submodules + anti-boucle)
+- [x] GROUP_PAT_TOKEN configure au niveau du groupe dst_crypto
+- [x] ImagePullSecrets crees dans les trois namespaces (dev, staging, production)
 
 ### Checklist Phase 6-7 : Tunnel + Fallback
 
 - [ ] Cloudflare Tunnel operationnel (equipe accede via navigateur)
-- [ ] Tailscale installe (admin accede a kubectl, ArgoCD UI)
+- [x] Tailscale installe (admin accede a kubectl, ArgoCD UI)
 - [ ] Nginx reverse proxy configure sur la VM AWS
 - [ ] CronJob backup toutes les 6h (PostgreSQL + MongoDB → VM AWS)
 - [ ] Script fallback.sh teste (docker-compose demarre + Nginx bascule)
@@ -1557,13 +1557,13 @@ helm install gitlab-runner gitlab/gitlab-runner \
 
 ### Checklist Securite
 
-- [ ] VMs K8s sur bridge isole (vmbr1), pas d'acces au LAN
-- [ ] SSH par cle uniquement sur Proxmox
+- [x] VMs K8s sur bridge isole (vmbr1), pas d'acces au LAN
+- [x] SSH par cle uniquement sur Proxmox
 - [ ] RBAC K8s configure (roles par namespace)
-- [ ] Sealed Secrets installe (pas de secrets en clair dans Git)
+- [x] Sealed Secrets installe (pas de secrets en clair dans Git)
 - [ ] NetworkPolicies (staging ne peut pas joindre production)
-- [ ] Containers non-root (deja le cas)
-- [ ] Document RSI : `docs/ARCHITECTURE_HYBRIDE_ENTREPRISE.md`
+- [x] Containers non-root (deja le cas)
+- [ ] Document RSI : `docs/ARCHITECTURE.md`
 
 
 ---
