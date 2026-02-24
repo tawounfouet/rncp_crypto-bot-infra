@@ -51,18 +51,19 @@ flowchart TB
 
     subgraph CI_BE["CI Backend"]
         BE_TEST[lint + test]
-        BE_SYNC[sync:parent]
+        BE_SYNC["sync:parent\n→ crypto-bot"]
     end
 
     subgraph CI_FE["CI Frontend"]
         FE_TEST[lint]
-        FE_SYNC[sync:parent]
+        FE_SYNC["sync:parent\n→ crypto-bot"]
     end
 
     subgraph CI_CB["CI Crypto-bot"]
-        CB_TEST[lint + test]
-        CB_BUILD[build images]
-        CB_SYNC[sync:submodules]
+        CB_TEST["lint + test\n⛔ skip si ci(...)"]
+        CB_BUILD["build images\n✅ tourne toujours"]
+        CB_SYNC["sync:submodules\n⛔ skip si ci(...)\n🔍 controle ancestralite"]
+        CB_MANIFESTS["update:manifests\n✅ tourne toujours"]
         CB_DEPLOY[deploy VM AWS]
     end
 
@@ -73,28 +74,31 @@ flowchart TB
     BE_TEST --> BE_SYNC
     FE_TEST --> FE_SYNC
 
-    BE_SYNC -->|"update submodule pointer"| CB
-    FE_SYNC -->|"update submodule pointer"| CB
+    BE_SYNC -->|"commit ci(backend):..."| CB
+    FE_SYNC -->|"commit ci(frontend):..."| CB
 
     CB_TEST --> CB_BUILD
     CB_BUILD --> CB_SYNC
-    CB_SYNC -->|"push commits"| BE
-    CB_SYNC -->|"push commits"| FE
+    CB_SYNC -->|"push si parent ahead\nskip si submodule ahead"| BE
+    CB_SYNC -->|"push si parent ahead\nskip si submodule ahead"| FE
+    CB_BUILD --> CB_MANIFESTS
     CB_BUILD --> CB_DEPLOY
+    CB_MANIFESTS -->|"commit infra"| INFRA
 
     subgraph K8S["Deploiement principal"]
-        ARGOCD_NODE["ArgoCD<br/>auto-sync staging<br/>sync manuel prod"]
+        INFRA[crypto-bot-infra]
+        ARGOCD_NODE["ArgoCD\nauto-sync staging\nsync manuel prod"]
     end
 
     subgraph FALLBACK["Fallback VM AWS"]
-        DOCKER["docker-compose<br/>(deploy SSH)"]
+        DOCKER["docker-compose\n(deploy SSH)"]
     end
 
-    CB_BUILD -->|":staging / :production"| ARGOCD_NODE
+    INFRA --> ARGOCD_NODE
     CB_DEPLOY -->|"SSH deploy"| DOCKER
 
     subgraph ANTIBOUCLE["Anti-boucle"]
-        RULE["commit ci(...) → skip sync"]
+        RULE["commit ci(...) →\nskip tests + sync:submodules\nbuild + manifests tournent"]
     end
 
     style ANTIBOUCLE fill:#ff9,stroke:#f90
@@ -103,7 +107,7 @@ flowchart TB
 
 ## Flux detaille : staging
 
-### Cas A — Dev travaille sur un seul composant (backend)
+### Cas A — Dev travaille sur un seul composant (ex: backend)
 
 ```mermaid
 sequenceDiagram
@@ -113,10 +117,11 @@ sequenceDiagram
     participant CryptoBot as crypto-bot repo
     participant CI_CB as CI Crypto-bot
     participant Registry as GitLab Registry
+    participant Infra as crypto-bot-infra
     participant ArgoCD
 
-    Dev->>Backend: git push origin feature/xxx
-    Dev->>Backend: MR feature/xxx → staging
+    Dev->>Backend: git push origin dev_nath
+    Dev->>Backend: MR dev_nath → staging
     Dev->>Backend: Merge MR
 
     Backend->>CI_BE: Pipeline staging
@@ -124,15 +129,19 @@ sequenceDiagram
     CI_BE->>CryptoBot: sync:parent (update submodule pointer)
     Note over CI_BE,CryptoBot: commit "ci(backend): update to abc1234"
 
-    CryptoBot->>CI_CB: Pipeline staging
-    Note over CI_CB: Tests SKIPPED (commit ci(...))
-    CI_CB->>Registry: build:docker → images :staging
-    CI_CB->>Backend: sync:submodules SKIPPED (commit ci(...))
+    CryptoBot->>CI_CB: Pipeline staging (commit ci(...))
+    Note over CI_CB: Tests SKIPPED (anti-boucle ci(...))
+    CI_CB->>Registry: build:docker → images :staging ✅
+    Note over CI_CB: Build tourne meme sur ci(...)
+    CI_CB->>Backend: sync:submodules → SKIPPED (anti-boucle ci(...))
+    CI_CB->>Infra: update:manifests → annotation deployed-commit ✅
     CI_CB->>CI_CB: deploy:staging (VM AWS)
 
-    ArgoCD->>ArgoCD: Detect new :staging images
+    ArgoCD->>Infra: Detect annotation change
     ArgoCD->>ArgoCD: Auto-sync K8s staging
 ```
+
+> **Flux identique pour le frontend** : MR sur frontend → `sync:parent` → crypto-bot CI → build → deploy
 
 ### Cas B — Dev travaille sur les deux (backend + frontend)
 
@@ -144,24 +153,30 @@ sequenceDiagram
     participant CryptoBot as crypto-bot repo
     participant CI_CB as CI Crypto-bot
     participant Registry as GitLab Registry
+    participant Infra as crypto-bot-infra
     participant ArgoCD
 
     Dev->>Dev: Modifie backend/ et frontend/
     Dev->>Dev: Commit dans chaque submodule + parent
-    Dev->>CryptoBot: ./scripts/push.sh feature/xxx
+    Dev->>CryptoBot: ./scripts/push.sh dev_nath
     Note over Dev,CryptoBot: Push backend + frontend + crypto-bot
 
-    Dev->>CryptoBot: MR feature/xxx → staging
+    Dev->>CryptoBot: MR dev_nath → staging
     Dev->>CryptoBot: Merge MR
 
     CryptoBot->>CI_CB: Pipeline staging
     CI_CB->>CI_CB: lint + test ✓
     CI_CB->>Registry: build:docker → images :staging
-    CI_CB->>Backend: sync:submodules → push staging branch
-    CI_CB->>Frontend: sync:submodules → push staging branch
-    Note over CI_CB,Frontend: commit normal → submodule CI SKIP sync (ci(...))
+
+    Note over CI_CB,Frontend: sync:submodules avec controle ancestralite
+    CI_CB->>Backend: push si parent ahead / skip si submodule ahead
+    CI_CB->>Frontend: push si parent ahead / skip si submodule ahead
+    Note over CI_CB,Frontend: commit normal → submodule CI voit ci(...) → skip sync:parent
+
+    CI_CB->>Infra: update:manifests → annotation deployed-commit
     CI_CB->>CI_CB: deploy:staging (VM AWS)
 
+    ArgoCD->>Infra: Detect annotation change
     ArgoCD->>ArgoCD: Auto-sync K8s staging
 ```
 
@@ -194,17 +209,48 @@ sequenceDiagram
 
 ## Anti-boucle
 
-Le mecanisme qui empeche les boucles infinies :
+Le mecanisme qui empeche les boucles infinies sans bloquer le build :
 
 ```
-crypto-bot merge → CI sync:submodules → push "ci(sync):..." sur backend
-    → backend CI declenche → voit "ci(" → SKIP sync:parent → STOP ✓
+Sens montant : backend merge staging
+  → CI sync:parent → commit "ci(backend):..." sur crypto-bot staging
+  → crypto-bot CI declenche :
+      ⛔ tests SKIP          (commit ci(...))
+      ✅ build:docker TOURNE (images :staging)
+      ⛔ sync:submodules SKIP (commit ci(...)) → PAS de re-push → STOP ✓
+      ✅ update:manifests TOURNE (annotation → ArgoCD sync)
+      ✅ deploy:staging TOURNE (VM AWS)
 
-backend merge → CI sync:parent → push "ci(backend):..." sur crypto-bot
-    → crypto-bot CI declenche → voit "ci(" → SKIP sync:submodules → STOP ✓
+Sens descendant : crypto-bot merge staging (commit normal)
+  → CI sync:submodules → controle ancestralite :
+      Si submodule ahead → SKIP (ne pas ecraser)
+      Si parent ahead → push normal (pas de force-push)
+  → push cree un commit sur backend/frontend staging
+  → submodule CI declenche → sync:parent → commit "ci(...):" sur crypto-bot
+  → crypto-bot CI → voit ci(...) → sync:submodules SKIP → STOP ✓
 ```
 
-**Regle unique** : si `$CI_COMMIT_MESSAGE` commence par `ci(`, tous les jobs sync sont ignores.
+**Regle par job** (commit `ci(`) :
+
+| Job | Skip sur `ci(` ? | Raison |
+|-----|------------------|--------|
+| `check:backend` | Oui | Deja teste dans le submodule |
+| `lint:frontend` | Oui | Deja teste dans le submodule |
+| `build:docker` | **Non** | Doit construire les nouvelles images |
+| `sync:submodules` | Oui | Empeche la boucle infinie |
+| `update:manifests` | **Non** | Doit mettre a jour ArgoCD |
+| `deploy:staging` | **Non** | Doit deployer sur VM AWS |
+
+### Controle d'ancestralite (sync:submodules)
+
+Avant de push vers un submodule, `sync:submodules` verifie :
+
+```
+1. SHA identique      → "Already up to date" → skip
+2. Submodule en avance → "AHEAD, skipping"    → skip (ne pas ecraser une MR mergee)
+3. Parent en avance    → push normal           → PAS de --force
+4. Push echoue         → warning               → intervention manuelle requise
+```
 
 
 ## Quand utiliser scripts/push.sh

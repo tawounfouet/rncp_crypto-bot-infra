@@ -23,14 +23,18 @@
 <rect x="260" y="410" width="120" height="30" rx="8" fill="#ffe3e3" stroke="#e03131" stroke-width="2"/>
 <rect x="80" y="500" width="220" height="50" rx="8" fill="#fce4cc" stroke="#e8590c" stroke-width="2"/>
 <rect x="500" y="500" width="220" height="50" rx="8" fill="#ffe8cc" stroke="#d9480f" stroke-width="2"/>
-<defs><marker id="ah_el_223" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#087f5b"/></marker></defs>
-<polyline points="145,270 150,390" fill="none" stroke="#087f5b" stroke-width="2" marker-end="url(#ah_el_223)"/>
-<defs><marker id="ah_el_225" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#e03131"/></marker></defs>
-<polyline points="295,270 320,390" fill="none" stroke="#e03131" stroke-width="2" marker-end="url(#ah_el_225)"/>
-<defs><marker id="ah_el_227" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#e8590c"/></marker></defs>
-<polyline points="145,145 190,500" fill="none" stroke="#e8590c" stroke-width="2" marker-end="url(#ah_el_227)"/>
-<defs><marker id="ah_el_229" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#d9480f"/></marker></defs>
-<polyline points="665,220 610,500" fill="none" stroke="#d9480f" stroke-width="2" marker-end="url(#ah_el_229)"/>
+<defs><marker id="ah_el_237" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#087f5b"/></marker></defs>
+<polyline points="125,270 130,390" fill="none" stroke="#087f5b" stroke-width="2" marker-end="url(#ah_el_237)"/>
+<defs><marker id="ah_el_239" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#e03131"/></marker></defs>
+<polyline points="275,270 300,390" fill="none" stroke="#e03131" stroke-width="2" marker-end="url(#ah_el_239)"/>
+<defs><marker id="ah_el_241" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#087f5b"/></marker></defs>
+<polyline points="170,390 225,195" fill="none" stroke="#087f5b" stroke-width="2" marker-end="url(#ah_el_241)"/>
+<defs><marker id="ah_el_243" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#e03131"/></marker></defs>
+<polyline points="340,390 250,195" fill="none" stroke="#e03131" stroke-width="2" marker-end="url(#ah_el_243)"/>
+<defs><marker id="ah_el_245" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#e8590c"/></marker></defs>
+<polyline points="80,145 80,500" fill="none" stroke="#e8590c" stroke-width="2" marker-end="url(#ah_el_245)"/>
+<defs><marker id="ah_el_247" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#d9480f"/></marker></defs>
+<polyline points="665,220 610,500" fill="none" stroke="#d9480f" stroke-width="2" marker-end="url(#ah_el_247)"/>
 <text x="158.0" y="52.85" font-size="14" fill="#868e96" text-anchor="start">GitLab Group: dst_crypto</text>
 <text x="182.5" y="92.85" font-size="14" fill="#868e96" text-anchor="start">Repo: crypto-bot (parent)</text>
 <text x="145.0" y="130.525" font-size="11" fill="#e8590c" text-anchor="middle">.gitlab-ci.yml</text>
@@ -70,8 +74,12 @@
 <text x="190.0" y="535.8" font-size="12" fill="#e8590c" text-anchor="middle">:dev / :staging / :production</text>
 <text x="610.0" y="520.8" font-size="12" fill="#d9480f" text-anchor="middle">ArgoCD</text>
 <text x="610.0" y="535.8" font-size="12" fill="#d9480f" text-anchor="middle">sync K8s cluster</text>
-<text x="147.5" y="333.85" font-size="14" fill="#087f5b" text-anchor="middle">sync CI</text>
-<text x="307.5" y="333.85" font-size="14" fill="#e03131" text-anchor="middle">sync CI</text>
-<text x="167.5" y="326.35" font-size="14" fill="#e8590c" text-anchor="middle">build+push</text>
+<text x="127.5" y="325.1" font-size="14" fill="#087f5b" text-anchor="middle">sync:submodules ↓</text>
+<text x="127.5" y="342.6" font-size="14" fill="#087f5b" text-anchor="middle">(si parent ahead)</text>
+<text x="287.5" y="325.1" font-size="14" fill="#e03131" text-anchor="middle">sync:submodules ↓</text>
+<text x="287.5" y="342.6" font-size="14" fill="#e03131" text-anchor="middle">(si parent ahead)</text>
+<text x="197.5" y="491.35" font-size="14" fill="#087f5b" text-anchor="middle">sync:parent ↑</text>
+<text x="385.0" y="491.35" font-size="14" fill="#e03131" text-anchor="middle">sync:parent ↑</text>
+<text x="80.5" y="326.35" font-size="14" fill="#e8590c" text-anchor="middle">build+push</text>
 <text x="692.5" y="363.85" font-size="14" fill="#d9480f" text-anchor="middle">watch main</text>
 </svg>
