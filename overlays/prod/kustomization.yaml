@@ -7,6 +7,7 @@ resources:
   - ../../base
   - ingress.yaml
   - secrets.yaml
+  - network-policy.yaml
 
 patches:
   - target:

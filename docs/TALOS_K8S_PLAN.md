@@ -160,6 +160,10 @@ Verdict : TRES CONFORTABLE. Staging + production + monitoring + spare.
 | talos-worker1 | Worker (staging apps + DBs) | 6 | 20 GB | 150 GB |
 | talos-worker2 | Worker (prod apps + DBs) | 6 | 20 GB | 150 GB |
 
+> **Note** : ces specs sont les valeurs actuelles (augmentees via Proxmox apres l'installation initiale).
+> La commande `talosctl` section 1.2 utilise les valeurs minimales de demarrage (2 vCPU, 2 GB),
+> ensuite augmentees a chaud depuis l'interface Proxmox.
+
 ### VM AWS DataScientest (0 EUR — fournie par l'ecole)
 
 | Fonction | Detail |

@@ -244,7 +244,7 @@ Le namespace `dev` n'est pas gere par ArgoCD — deploiement manuel via `dev-dep
 |-----------|-------|---------------|
 | OS K8s | **Talos Linux** | Immutable, securise, API-driven, pas de SSH |
 | Hyperviseur | **Proxmox VE** | Interface web, snapshots, KVM natif |
-| Overlay network | **Flannel** (defaut Talos) | Simple, integre a Talos |
+| Overlay network | **Flannel** (defaut Talos) | Simple, integre a Talos. **Ne supporte pas les NetworkPolicies** sans policy controller additionnel (Calico, Kube-Router). Les manifests NetworkPolicy sont deployes (intention documentee) mais non enforces tant qu'un policy controller n'est pas installe. |
 | LoadBalancer | **MetalLB** | IPs LoadBalancer sur bare-metal |
 | Ingress | **NGINX Ingress Controller** | Standard, bien documente |
 | GitOps | **ArgoCD** | Reference GitOps pull-based, UI web |

@@ -49,7 +49,7 @@ curl.exe -LO "https://dl.k8s.io/release/v1.32.2/bin/windows/amd64/kubectl.exe"
 ## 2. Configurer l'acces SSH au Proxmox
 
 Le cluster K8s tourne sur un reseau isole (10.10.0.0/24) derriere le serveur Proxmox.
-Pour y acceder, on utilise un **tunnel SSH** a travers le Proxmox.
+Chaque membre a besoin d'un acces SSH au Proxmox (pour les taches admin). L'acces au cluster K8s se fait via **Tailscale** (voir section 3.2).
 
 ### 2.1 Generer une cle SSH (si pas deja fait)
 
@@ -241,7 +241,7 @@ stringData:
   MA_NOUVELLE_CLE: "ma_nouvelle_valeur"
 EOF
 
-# 2. Chiffrer avec kubeseal (le tunnel SSH doit etre actif)
+# 2. Chiffrer avec kubeseal (acces reseau au cluster requis : Tailscale ou tunnel SSH)
 kubeseal --controller-namespace kube-system \
   --format yaml \
   < /tmp/secret.yaml \

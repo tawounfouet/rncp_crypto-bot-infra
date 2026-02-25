@@ -4,3 +4,7 @@ diagrams/*.png
 # Diagram scripts (local tooling)
 diagrams/generate.py
 diagrams/export.py
+
+# Local-only files (secrets, notes)
+docs/.local-secrets.md
+docs/TODO.md
