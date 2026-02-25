@@ -34,34 +34,37 @@
 | Phase | Description | Statut | Dependances |
 |-------|-------------|--------|-------------|
 | **6 — Qualite & Tests** | | | |
-| 6.1 | Tests unitaires backend | A faire | — |
-| 6.2 | Tests unitaires frontend | A faire | — |
+| 6.1 | Tests unitaires backend | Partiel | — |
+| 6.2 | Tests unitaires frontend | Partiel | — |
 | 6.3 | Tests d'integration API | A faire | — |
 | 6.4 | Strategie de logging (Grafana) | A faire | — |
 | **7 — Fondations techniques** | | | |
-| 7.1 | Architecture frontend (structure, templating, style) | A faire | — |
-| 7.2 | Figeage des versions (deps, images, CI) | A faire | — |
-| 7.3 | Architecture donnees (historisation, multi-crypto) | A faire | — |
+| 7.1 | Architecture frontend (structure, templating, style) | Partiel | — |
+| 7.2 | Figeage des versions (deps, images, CI) | Partiel | — |
+| 7.3 | Architecture donnees (historisation, multi-crypto) | Partiel | — |
+| 7.4 | Visualisation de donnees (outil dedie, RGAA) | A faire | 7.3 |
+| 7.5 | Pipeline ETL formel (collecte → transformation → stockage) | Partiel | 7.3 |
 | **8 — Securite Binance & RGPD** | | | |
 | 8.1 | Chiffrement cles API en BDD | A faire | 7 |
 | 8.2 | Conformite RGPD (consentement, suppression, journalisation) | A faire | 8.1 |
 | 8.3 | Backend endpoint credentials | A faire | 8.1 |
 | 8.4 | Frontend section credentials (Page 5) | A faire | 8.3 |
 | **9 — Portefeuille (Page 1)** | | | |
-| 9.1 | Backend endpoints portfolio | A faire | 8 |
+| 9.1 | Backend endpoints portfolio | Partiel | 8 |
 | 9.2 | Frontend Page 1 | A faire | 7.1, 9.1 |
 | **10 — Bot & Trading (Pages 2 + 4)** | | | |
-| 10.1 | Backend endpoints bots (CRUD, start/pause/stop, config) | A faire | 9 |
+| 10.1 | Backend endpoints bots (CRUD, start/pause/stop, config) | Partiel | 9 |
 | 10.2 | Frontend Page 2 — Controle Bot | A faire | 7.1, 10.1 |
 | 10.3 | Frontend Page 4 — Parametrage | A faire | 7.1, 10.1 |
 | 10.4 | Strategie DCA | A faire | 10.1 |
 | 10.5 | Strategie Grid Trading | A faire | 10.1 |
 | **11 — Performances & Backtesting (Page 3)** | | | |
-| 11.1 | Backend endpoints performance | A faire | 10 |
+| 11.1 | Backend endpoints performance | Partiel | 10 |
 | 11.2 | Frontend Page 3 — Performances | A faire | 7.1, 11.1 |
 | 11.3 | Backtesting des strategies | A faire | 7.3, 11.1 |
+| 11.4 | Algorithme d'intelligence artificielle (C12) | A faire | 7.3, 11.1 |
 | **12 — Admin, Monitoring & Alertes (Pages 5 + 6)** | | | |
-| 12.1 | Backend endpoints admin users | A faire | 8 |
+| 12.1 | Backend endpoints admin users | Partiel | 8 |
 | 12.2 | Backend proxy Prometheus | A faire | — |
 | 12.3 | Frontend Page 5 — Admin | A faire | 7.1, 12.1 |
 | 12.4 | Frontend Page 6 — Monitoring | A faire | 7.1, 12.2 |
@@ -124,17 +127,30 @@ argocd/
 
 > Parallelisable avec toutes les autres phases.
 
-### 6.1 — Tests unitaires backend
+### 6.1 — Tests unitaires backend — Partiel
 
-- Completer la couverture (objectif a definir)
-- Couvrir les domaines : auth, market, trading, strategy
+**Existant :**
+- `test_auth_service.py` (113 lignes) : hashing, tokens, sessions, JWT
+- `test_client_binance.py` (154 lignes) : init, API calls, erreurs, testnet
+- Structure pytest en place (`tests/unit/`, `tests/integration/`, `conftest.py`)
+- CI : pytest avec coverage dans pipeline backend + parent
+
+**A completer :**
+- Couverture domaines manquants : market, trading, strategy
 - Mocks pour Binance API et BDD
+- Objectif couverture a definir
 
-### 6.2 — Tests unitaires frontend
+### 6.2 — Tests unitaires frontend — Partiel
 
-- Tests des composants Streamlit
-- Tests de l'AuthManager
+**Existant :**
+- `test_auth.py` : script basique (health check, validation email, password strength)
+- CI : flake8 + black (pas de pytest)
+
+**A completer :**
+- Tests des composants Streamlit (pages)
+- Tests de l'AuthManager (necessite mock session_state)
 - Mocks des appels API backend
+- Integration pytest dans CI frontend
 
 ### 6.3 — Tests d'integration API
 
@@ -153,30 +169,68 @@ argocd/
 
 ## Phase 7 — Fondations techniques
 
-### 7.1 — Architecture frontend
+### 7.1 — Architecture frontend — Partiel
 
-- Structure des pages Streamlit (multi-page app via `st.navigation`)
+**Existant :**
+- Structure multi-page (`navigation.py` routeur, pages login/signup/app/info)
+- Module auth complet (api_client, auth_manager, config, utils, migration guide)
+- Systeme de badges environnement (dev/staging/prod)
+- Session state management (tokens, user_data, page routing)
+- Sidebar avec info utilisateur + logout
+
+**A completer :**
+- Page app = placeholder ("Hello World") — pas de contenu metier
 - Systeme de templating / composants reutilisables
 - Charte graphique et style (CSS custom, theme coherent)
-- Composants partages : header, sidebar, notifications, formulaires, badges status
-- Navigation et routing entre pages
+- Composants partages : header, notifications, formulaires, badges status
+- Accessibilite (RGAA) : contrastes, navigation clavier, labels
 
-### 7.2 — Figeage des versions
+### 7.2 — Figeage des versions — Partiel
 
-- requirements.txt backend + frontend : toutes deps pinnees (`==X.Y.Z`)
-- Dockerfiles : images de base avec tags precis
-- minio:latest → version pinnee (`RELEASE.YYYY-MM-DD...`)
-- docker-compose AWS : tags d'images verifies
-- Images CI : versions verifiees
+**Existant :**
+- Backend requirements.txt : deps pinnees (FastAPI==0.104.1, pandas==2.2.3, etc.)
+- Frontend requirements.txt : deps pinnees (streamlit==1.37.1, requests==2.32.3, etc.)
+- Dockerfiles : python:3.11-slim, postgres:14, mongo:4.4
+- MinIO pinne (`RELEASE.2024-12-18T13-15-44Z`) dans K8s
 
-### 7.3 — Architecture donnees
+**A completer :**
+- docker-compose AWS : verifier tags d'images (mongo/postgres)
+- Images CI : versions a verifier
 
-- Choix BDD pour l'historique (MongoDB collections vs PostgreSQL tables)
-- Schema des donnees marche (OHLCV, orderbook, trades)
-- Frequence de collecte (1min, 5min, 15min ?)
-- Volumetrie estimee pour 1 paire (ex: BTC/USDT candles 1min = ~525 600 lignes/an)
-- Strategie de retention et archivage
+### 7.3 — Architecture donnees — Partiel
+
+**Existant :**
+- 6 modeles SQLAlchemy : User, Strategy, StrategyDeployment, Order, Transaction, MarketData
+- Schema MarketData : symbol, interval, OHLCV, volume metrics, timestamps
+- PostgreSQL pour donnees structurees, MongoDB configure
+- UUID primary keys, index, soft delete, JSON parameters
+
+**A completer :**
+- Document formel d'architecture donnees
+- Frequence de collecte definie (1min, 5min, 15min ?)
+- Volumetrie estimee et strategie de retention
 - Architecture multi-crypto : partitioning, indexation, scalabilite
+
+### 7.4 — Visualisation de donnees (C10)
+
+- Outil de visualisation dedie (Streamlit/Plotly — argumenter vs Power BI/Tableau)
+- Dashboard qualite et integrite des donnees
+- Visualisation accessible et comprehensible (RGAA)
+- Choix de l'outil justifie en lien avec les typologies de donnees
+
+### 7.5 — Pipeline ETL formel (C11) — Partiel
+
+**Existant :**
+- MarketDataInsertService : collecte Binance → indicateurs techniques → UPSERT PostgreSQL
+- Indicateurs calcules : SMA, EMA, RSI, Bollinger Bands, MACD
+- Endpoint `POST /market/data/insert` (insertion manuelle)
+
+**A completer :**
+- Automatisation (scheduler / Airflow ou CronJob K8s)
+- Documentation formelle du processus ETL
+- Tests de validation du pipeline
+- Gestion des erreurs documentee
+- Securite des donnees dans le pipeline
 
 ---
 
@@ -210,15 +264,25 @@ argocd/
 
 ---
 
-## Phase 9 — Portefeuille (Page 1 MVP)
+## Phase 9 — Portefeuille (Page 1 MVP) — Partiel
 
 > Ref : `v1_architecture_app_streamlit.pdf` — Page 1
 
-### 9.1 — Backend endpoints
+### 9.1 — Backend endpoints — Partiel
+
+**Endpoints existants (a adapter/renommer) :**
+- `GET /health` + `GET /health/detailed` (statut backend + BDD)
+- `GET /trading/portfolio` (holdings actuels)
+- `GET /trading/positions` (positions ouvertes avec P&L)
+- `GET /trading/orders` (liste ordres, filtrable)
+- `POST /trading/orders` (creer un ordre)
+- `GET /trading/statistics` (stats PnL, win rate)
+- `GET /market/price/{symbol}` + `GET /market/prices` (prix temps reel)
+
+**Endpoints a creer/adapter pour MVP :**
 
 | Methode | Endpoint | Description |
 |---------|----------|-------------|
-| GET | `/status` | Statut backend + Binance |
 | GET | `/portfolio/spot/overview?quote=USDT` | KPI (valeur totale, cash, nb actifs, nb ordres) |
 | GET | `/portfolio/spot/balances?quote=USDT` | Table balances (Asset, Free, Locked, Total, Prix, Valeur, %) |
 | GET | `/portfolio/spot/allocation?quote=USDT&top=10` | Graph allocation (top 10 + others) |
@@ -237,11 +301,32 @@ argocd/
 
 ---
 
-## Phase 10 — Bot & Trading (Pages 2 + 4 MVP)
+## Phase 10 — Bot & Trading (Pages 2 + 4 MVP) — Partiel
 
 > Ref : `v1_architecture_app_streamlit.pdf` — Pages 2 et 4
 
-### 10.1 — Backend endpoints
+### 10.1 — Backend endpoints — Partiel
+
+**Endpoints existants (strategies + deployments) :**
+- `GET /strategies/available` (types de strategies disponibles)
+- `GET/POST /strategies/` (CRUD strategies utilisateur)
+- `GET/PUT/DELETE /strategies/{id}` (detail, update, soft delete)
+- `POST /strategies/{id}/deploy` (deployer pour trading)
+- `GET /strategies/deployments/` (liste deployments)
+- `POST /strategies/deployments/{id}/stop` (arreter)
+- `POST /strategies/validate` (valider parametres)
+
+**4 strategies implementees :**
+- MovingAverageCrossover (fast/slow MA)
+- RSIReversal (mean reversion RSI)
+- BollingerBands (breakout/squeeze)
+- MultiIndicator (MA+RSI+BB combines)
+
+**Pas encore implemente :**
+- Execution live (soumission ordres reels via API Binance)
+- Scheduler / background tasks pour execution continue
+
+**Endpoints a creer/adapter pour MVP (namespace `/bots`) :**
 
 | Methode | Endpoint | Description |
 |---------|----------|-------------|
@@ -278,11 +363,18 @@ argocd/
 
 ---
 
-## Phase 11 — Performances & Backtesting (Page 3 MVP)
+## Phase 11 — Performances & Backtesting (Page 3 MVP) — Partiel
 
 > Ref : `v1_architecture_app_streamlit.pdf` — Page 3
 
-### 11.1 — Backend endpoints
+### 11.1 — Backend endpoints — Partiel
+
+**Existant :**
+- `GET /trading/statistics` (PnL, win rate, nb trades — basique)
+- `GET /trading/orders?status=filled` (journal trades filtrable)
+- Modeles Order et Transaction avec timestamps, PnL
+
+**Endpoints a creer pour MVP :**
 
 | Methode | Endpoint | Description |
 |---------|----------|-------------|
@@ -304,17 +396,35 @@ argocd/
 - Comparaison de resultats entre strategies
 - Visualisation des resultats (metriques + equity curve simulee)
 
+### 11.4 — Algorithme d'intelligence artificielle (C12)
+
+- Composant ML integre au projet (ex: prediction de prix, detection d'anomalies, recommandation de strategie)
+- Choix du type de modele argumente (supervise, non supervise, renforcement)
+- Framework : scikit-learn, TensorFlow ou PyTorch
+- Evaluation sur echantillon test, pertinence metier justifiee
+- Optimisation ressources (frugalite IA)
+- Mesures d'optimisation du modele proposees
+
 ---
 
-## Phase 12 — Admin, Monitoring & Alertes (Pages 5 + 6 MVP)
+## Phase 12 — Admin, Monitoring & Alertes (Pages 5 + 6 MVP) — Partiel
 
 > Ref : `v1_architecture_app_streamlit.pdf` — Pages 5 et 6
 
-### 12.1 — Backend endpoints admin
+### 12.1 — Backend endpoints admin — Partiel
+
+**Existant :**
+- `GET /users/` (admin : liste tous les utilisateurs)
+- `GET /users/{user_id}` (admin : fiche utilisateur)
+- `PUT /users/{user_id}` (admin : modifier)
+- `DELETE /users/{user_id}` (admin : supprimer)
+- Endpoints activate/deactivate utilisateur
+
+**Endpoints a creer/adapter pour MVP :**
 
 | Methode | Endpoint | Description |
 |---------|----------|-------------|
-| GET | `/admin/users` | Liste utilisateurs |
+| GET | `/admin/users` | Liste utilisateurs (namespace admin dedie) |
 | GET | `/admin/users/{user_id}` | Fiche utilisateur |
 | PATCH | `/admin/users/{user_id}` | Modifier role/statut |
 
@@ -373,6 +483,106 @@ argocd/
 - [ ] NetworkPolicies / RBAC (isolation namespaces)
 - [ ] Audit securite du code (injections, deps vulnerables)
 - [ ] minio:latest → version pinnee
+
+---
+
+## Livrables referentiel examen (transversal)
+
+> Competences du referentiel Data Engineer (C1-C24) qui necessitent des livrables specifiques.
+> Ref : `V2023_DE_Referentiel_v20231025.pdf`
+>
+> **Livrable livre** : `Cahier_des_charges_Crypto_Bot_V0.1.pdf` (22 pages, dec. 2024)
+
+### Veille technologique et reglementaire (C2, C3) — Partiel
+
+**Couvert par le CdC :**
+- [x] Analyse concurrentielle (§7 — Cryptohopper, OctoBot, Freqtrade, etc.)
+- [x] Tendances du marche (§7.3 — IA, convivialite, copie de trading)
+- [x] Cadre reglementaire RGPD (§15 — conformite, conditions API Binance)
+
+**A completer :**
+- [ ] Rapport de veille formel : sources verifiees, canaux (RSS, alertes, reseaux pro)
+- [ ] Cadre reglementaire complet : RGAA, RSE
+- [ ] Synthese structuree avec identification des cas d'usage
+
+### Cahier des charges formel (C4, C5) — Largement couvert
+
+**Couvert par le CdC :**
+- [x] Objectifs du projet (§1, §4 — 7 objectifs fonctionnels)
+- [x] Besoins en architecture et sources de donnees (§9A, §10)
+- [x] Contraintes (volume, delais — §19 calendrier)
+- [x] Specifications fonctionnelles detaillees (§9 A-F — collecte, ETL, ML, trading, monitoring)
+- [x] Specifications techniques (§10 — Python, FastAPI, PostgreSQL, MongoDB, Airflow, Docker)
+- [x] Analyse SWOT (§8 — forces/faiblesses/opportunites/menaces)
+- [x] Recommandations argumentees (§10 — choix technos, §7.4 — politiques tarifaires)
+- [x] Conformite RGPD (§15)
+- [x] Cas d'utilisation (Annexes — 8 cas avec diagrammes)
+- [x] Livrables identifies (§17 — plateforme, dashboards, gestion users, documentation)
+
+**A completer :**
+- [ ] RGAA explicite (accessibilite)
+- [ ] Eco-conception et impact ecologique estime
+- [ ] Conception universelle
+
+### Eco-conception et impact ecologique (C4, C8, C23) — A faire
+
+> Non couvert par le CdC.
+
+- [ ] Estimation empreinte de la solution (consommation K8s, stockage, reseau)
+- [ ] Mesures de sobriete numerique proposees
+- [ ] Cycle de vie des ressources (creation/retrait/archivage)
+- [ ] Impact ecologique mesure des procedures ETL
+
+### Accessibilite RGAA (C3, C4, C19, C20, C24) — A faire
+
+> Non couvert par le CdC.
+
+- [ ] Audit accessibilite du frontend Streamlit
+- [ ] Conception universelle (utilisateurs + parties prenantes)
+- [ ] Mesures d'inclusion personnes en situation de handicap dans l'equipe projet
+
+### Gestion de projet formelle (C19, C20) — Partiel
+
+**Couvert par le CdC :**
+- [x] Outils de gestion identifies (§18 — Trello, Github, Drive, Slack)
+- [x] Calendrier de developpement (§19 — 6 phases, soutenance sept. 2026)
+
+**A completer :**
+- [ ] Objectifs SMART (Specifique, Mesurable, Acceptable, Realiste, Temporel)
+- [ ] Matrice RACI (roles et responsabilites)
+- [ ] Methodes agiles documentees et justifiees (Kanban GitLab)
+
+### Budget previsionnel (C21) — Partiel
+
+**Couvert par le CdC :**
+- [x] Chiffrage detaille (§21 — 6 426 EUR total)
+- [x] Couts dev (frontend 160h, data engineer 200h, data scientist 120h = 5 760 EUR)
+- [x] Couts infra (AWS Lightsail + t2.micro = 150 EUR)
+- [x] Frais operationnels (transactions + API = 512 EUR)
+
+**A completer :**
+- [ ] Mise a jour budget avec infra reelle (Proxmox, domaine, licences)
+- [ ] Analyse ecarts budget previsionnel vs charges reelles
+- [ ] Mesures correctives si ecarts
+
+### KPI et amelioration continue (C23) — A faire
+
+> Non couvert par le CdC.
+
+- [ ] Metriques quantifiables (avancement, couverture tests, uptime, latence)
+- [ ] Mesure impact environnemental de la solution
+- [ ] Feedback utilisateurs pris en compte
+- [ ] Axes d'amelioration SMART argumentes
+
+### Plan d'accompagnement utilisateurs (C24) — Partiel
+
+**Couvert par le CdC :**
+- [x] Typologies d'utilisateurs (§5 — 3 personas : Occasionnel, Experimente, Debutant)
+- [x] Besoins par profil identifies (interface simple, outils avances, mode educatif)
+
+**A completer :**
+- [ ] Plan de formation structure (sequencement, sujets)
+- [ ] Support prise en main de la solution
 
 ---
 
