@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: crypto-bot-daily-midnight
+  namespace: production
+spec:
+  schedule: "0 0 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: daily-task
+              image: registry.gitlab.com/dst_crypto/crypto-bot/backend:production
+              imagePullPolicy: Always
+              command:
+                - /bin/sh
+                - -c
+              args:
+                - |
+                  python src\auth\purge_inactive_users.py
+                  echo "Exécution du job quotidien de suppression utilisateurs à minuit"
+          # serviceAccountName: crypto-bot-backend-sa
+          # Ajoutez ici les variables d'environnement et les secrets nécessaires.
