@@ -24,14 +24,14 @@ spec:
         - name: gitlab-registry
       containers:
         - name: frontend
-          image: registry.gitlab.com/dst_crypto/crypto-bot/frontend:latest
+          image: registry.gitlab.com/dst_crypto/crypto-bot-app/frontend:latest
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
             readOnlyRootFilesystem: false
           imagePullPolicy: Always
-          command: ["streamlit", "run", "src/navigation.py",
+          command: ["streamlit", "run", "src/app.py",
             "--server.port=8501", "--server.address=0.0.0.0",
             "--server.headless=true", "--server.enableCORS=false",
             "--server.enableXsrfProtection=false"]

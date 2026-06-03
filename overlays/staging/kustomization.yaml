@@ -16,7 +16,7 @@ patches:
     patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/image
-        value: registry.gitlab.com/dst_crypto/crypto-bot/backend:staging
+        value: registry.gitlab.com/dst_crypto/crypto-bot-app/backend:staging
       - op: add
         path: /spec/template/spec/containers/0/env/-
         value:
@@ -38,7 +38,7 @@ patches:
     patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/image
-        value: registry.gitlab.com/dst_crypto/crypto-bot/frontend:staging
+        value: registry.gitlab.com/dst_crypto/crypto-bot-app/frontend:staging
       - op: add
         path: /spec/template/spec/containers/0/env/-
         value:
