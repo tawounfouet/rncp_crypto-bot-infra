@@ -109,6 +109,35 @@ Le cluster K8s est sur un reseau isole (10.10.0.0/24) derriere le Proxmox.
 3. Active l'acceptation des routes : `tailscale up --accept-routes`
 4. Le reseau 10.10.0.0/24 est directement accessible, pas besoin de tunnel
 
+#### WSL2 sans systemd — demarrer Tailscale manuellement
+
+Sous WSL2, systemd n'est souvent pas actif → `sudo systemctl start tailscaled`
+echoue (« System has not been booted with systemd as init system »). Dans ce cas,
+le demon `tailscaled` ne tourne pas du tout et `tailscale status` repond
+« failed to connect to local tailscaled ». Demarrer le demon a la main :
+
+```bash
+sudo bash -c 'nohup tailscaled --state=/var/lib/tailscale/tailscaled.state \
+  >/tmp/tailscaled.log 2>&1 & disown'
+```
+
+Puis connecter le node + accepter les routes. Si `tailscale up` repond
+« requires mentioning all non-default flags », re-mentionner les flags existants
+(l'erreur affiche la commande exacte a copier) :
+
+```bash
+tailscale up --accept-routes --hostname=<ton-host> --operator=<ton-user>
+```
+
+Verifier — les routes Tailscale vivent dans la **table 52**, PAS dans `ip route`
+(table `main`), donc `ip route | grep 10.10.0.0` renvoie un faux negatif :
+
+```bash
+ip route show table 52 | grep 10.10.0.0   # doit lister 10.10.0.0/24 via tailscale0
+tailscale ping pve1                         # doit repondre "pong from pve1"
+kbot get nodes                              # 3 noeuds Ready
+```
+
 **Methode alternative — Tunnel SSH (si pas de Tailscale)** :
 
 ```bash
@@ -401,6 +430,21 @@ plusieurs environnements en parallele (un terminal par environnement).
 
 > **Note** : PostgreSQL et MongoDB ne sont **pas** des services HTTP.
 > N'essayez pas d'y acceder via un navigateur — utilisez un client dedie.
+
+#### Identifiants ArgoCD / Grafana
+
+- **ArgoCD** — user `admin`, mot de passe = secret `argocd-initial-admin-secret` :
+
+  ```bash
+  kbot -n argocd get secret argocd-initial-admin-secret \
+    -o jsonpath='{.data.password}' | base64 -d && echo
+  ```
+
+  > Si le secret est absent, c'est qu'il a ete supprime apres un premier login
+  > (mot de passe alors deja change). Demander a l'admin.
+
+- **Grafana** — identifiants par defaut `admin` / `admin` (a changer au 1er login),
+  sauf si surcharges via le secret `monitoring-grafana` du namespace `monitoring`.
 
 ### Port-forward manuel (un service a la fois)
 
