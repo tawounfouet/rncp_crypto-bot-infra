@@ -5,7 +5,7 @@
 ### Situation actuelle
 
 - Backend FastAPI (:8009) + Frontend Streamlit (:8501)
-- BDD : PostgreSQL 14, MongoDB, MinIO (S3-compatible)
+- BDD : PostgreSQL 14, MinIO (S3-compatible)
 - CI/CD : GitLab CI (lint > test > build > deploy via SSH)
 - Infra : Docker Compose sur VM AWS DataScientest
   - staging (:8009/:8501) et production (:9009/:8502) sur la meme VM
@@ -255,4 +255,4 @@ Le namespace `dev` n'est pas gere par ArgoCD — deploiement manuel via `dev-dep
 | Acces equipe | **Cloudflare Tunnel** | Outbound-only, zero port entrant, free tier |
 | Acces admin | **Tailscale** | Mesh VPN gratuit, traverse NAT |
 | VM AWS | **Nginx + docker-compose** | Reverse proxy + resilience |
-| Backups | **CronJob K8s** | pg_dump + mongodump toutes les 6h vers VM AWS |
+| Backups | **CronJob K8s** | pg_dump toutes les 6h vers VM AWS |

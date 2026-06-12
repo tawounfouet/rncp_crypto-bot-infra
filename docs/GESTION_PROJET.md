@@ -73,7 +73,7 @@
 
 | Critere | Description |
 |---------|-------------|
-| **S** — Specifique | Pipeline ETL automatise (collecte Binance → transformation → stockage PostgreSQL/MongoDB) + composant ML (prediction ou recommandation strategie) |
+| **S** — Specifique | Pipeline ETL automatise (collecte Binance → transformation → stockage PostgreSQL) + composant ML (prediction ou recommandation strategie) |
 | **M** — Mesurable | Collecte multi-crypto fonctionnelle, indicateurs techniques calcules (SMA, RSI, MACD, BB), modele ML evalue (metriques sur echantillon test) |
 | **A** — Acceptable | Pipeline documente, modele justifie (choix argumente), conformite eco-conception |
 | **R** — Realiste | Donnees Binance accessibles gratuitement, frameworks ML maitrisables (scikit-learn, TensorFlow) |

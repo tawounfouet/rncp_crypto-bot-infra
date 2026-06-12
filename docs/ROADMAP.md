@@ -110,7 +110,7 @@ argocd/
 **Architecture :**
 
 - CronJob K8s toutes les 6h (00h, 06h, 12h, 18h UTC)
-- 3 containers sequentiels : pg_dump → mongodump → SCP vers AWS
+- 2 containers sequentiels : pg_dump → SCP vers AWS
 - Rotation 3 jours (~12 backups, ~6 GB max)
 
 **Etapes :**
@@ -190,11 +190,11 @@ argocd/
 **Existant :**
 - Backend requirements.txt : deps pinnees (FastAPI==0.104.1, pandas==2.2.3, etc.)
 - Frontend requirements.txt : deps pinnees (streamlit==1.37.1, requests==2.32.3, etc.)
-- Dockerfiles : python:3.11-slim, postgres:14, mongo:4.4
+- Dockerfiles : python:3.11-slim, postgres:14
 - MinIO pinne (`RELEASE.2024-12-18T13-15-44Z`) dans K8s
 
 **A completer :**
-- docker-compose AWS : verifier tags d'images (mongo/postgres)
+- docker-compose AWS : verifier tags d'images (postgres)
 - Images CI : versions a verifier
 
 ### 7.3 — Architecture donnees — Partiel
@@ -202,7 +202,7 @@ argocd/
 **Existant :**
 - 6 modeles SQLAlchemy : User, Strategy, StrategyDeployment, Order, Transaction, MarketData
 - Schema MarketData : symbol, interval, OHLCV, volume metrics, timestamps
-- PostgreSQL pour donnees structurees, MongoDB configure
+- PostgreSQL pour donnees structurees
 - UUID primary keys, index, soft delete, JSON parameters
 
 **A completer :**
@@ -512,7 +512,7 @@ argocd/
 - [x] Besoins en architecture et sources de donnees (§9A, §10)
 - [x] Contraintes (volume, delais — §19 calendrier)
 - [x] Specifications fonctionnelles detaillees (§9 A-F — collecte, ETL, ML, trading, monitoring)
-- [x] Specifications techniques (§10 — Python, FastAPI, PostgreSQL, MongoDB, Airflow, Docker)
+- [x] Specifications techniques (§10 — Python, FastAPI, PostgreSQL, Airflow, Docker)
 - [x] Analyse SWOT (§8 — forces/faiblesses/opportunites/menaces)
 - [x] Recommandations argumentees (§10 — choix technos, §7.4 — politiques tarifaires)
 - [x] Conformite RGPD (§15)

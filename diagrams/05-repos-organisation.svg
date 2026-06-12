@@ -51,7 +51,7 @@
 <text x="529.0" y="92.85" font-size="14" fill="#868e96" text-anchor="start">Repo: crypto-bot-infra</text>
 <text x="510.0" y="122.75" font-size="10" fill="#1971c2" text-anchor="middle">base/</text>
 <text x="510.0" y="135.25" font-size="10" fill="#1971c2" text-anchor="middle">backend/ frontend/</text>
-<text x="510.0" y="147.75" font-size="10" fill="#1971c2" text-anchor="middle">postgres/ mongo/ minio/</text>
+<text x="510.0" y="147.75" font-size="10" fill="#1971c2" text-anchor="middle">postgres/ minio/</text>
 <text x="665.0" y="129.0" font-size="10" fill="#1971c2" text-anchor="middle">overlays/</text>
 <text x="665.0" y="141.5" font-size="10" fill="#1971c2" text-anchor="middle">dev/ staging/ prod/</text>
 <text x="510.0" y="187.75" font-size="10" fill="#7048e8" text-anchor="middle">monitoring/</text>

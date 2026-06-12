@@ -422,13 +422,12 @@ plusieurs environnements en parallele (un terminal par environnement).
 | Frontend | localhost:8501 | localhost:8601 | localhost:8701 | — |
 | Backend API | localhost:8009 | localhost:8109 | localhost:8209 | — |
 | PostgreSQL | localhost:5432 | localhost:5532 | localhost:5632 | — |
-| MongoDB | localhost:27017 | localhost:27117 | localhost:27217 | — |
 | MinIO API | localhost:9000 | localhost:9100 | localhost:9200 | — |
 | MinIO Console | localhost:9001 | localhost:9101 | localhost:9201 | — |
 | ArgoCD | — | — | — | https://localhost:8443 |
 | Grafana | — | — | — | http://localhost:3000 |
 
-> **Note** : PostgreSQL et MongoDB ne sont **pas** des services HTTP.
+> **Note** : PostgreSQL n'est **pas** un service HTTP.
 > N'essayez pas d'y acceder via un navigateur — utilisez un client dedie.
 
 #### Identifiants ArgoCD / Grafana
@@ -453,7 +452,6 @@ plusieurs environnements en parallele (un terminal par environnement).
 kbot port-forward -n dev svc/crypto-bot-frontend 8501:8501
 kbot port-forward -n dev svc/crypto-bot-backend 8009:8009
 kbot port-forward -n dev svc/postgres 5432:5432
-kbot port-forward -n dev svc/mongo 27017:27017
 kbot port-forward -n dev svc/minio 9000:9000 9001:9001
 ```
 
@@ -462,15 +460,6 @@ kbot port-forward -n dev svc/minio 9000:9000 9001:9001
 **PostgreSQL** (`psql`, DBeaver, pgAdmin, DataGrip) :
 ```bash
 psql -h 127.0.0.1 -p 5432 -U <POSTGRES_USER> -d crypto_bot_db
-```
-
-**MongoDB** (`mongo`, `mongosh`, Compass, Studio 3T) :
-```bash
-# mongo:4.4 utilise le client "mongo" (mongosh n'est pas inclus)
-mongo -u <MONGODB_USER> -p <MONGODB_PWD> --authenticationDatabase admin 127.0.0.1:27017
-
-# Si mongosh est installe localement
-mongosh "mongodb://<MONGODB_USER>:<MONGODB_PWD>@127.0.0.1:27017/admin"
 ```
 
 **MinIO** : ouvrir http://localhost:9001 (console web)
@@ -483,7 +472,7 @@ kbot get secret -n dev crypto-bot-secrets -o jsonpath='{.data}' \
     [print(f'{k}: {base64.b64decode(v).decode()}') for k,v in d.items()]"
 ```
 
-Les cles disponibles : `POSTGRES_USER`, `POSTGRES_PWD`, `MONGODB_USER`, `MONGODB_PWD`,
+Les cles disponibles : `POSTGRES_USER`, `POSTGRES_PWD`,
 `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `SECRET_KEY`.
 
 ---
@@ -504,15 +493,10 @@ kubectl label ns local-path-storage pod-security.kubernetes.io/enforce=privilege
 
 Sans cette commande, les PVCs resteront en `Pending`.
 
-### MongoDB et AVX
-
-Les CPUs des VMs Proxmox n'ont pas le support AVX, requis par MongoDB 5+.
-Le cluster utilise donc `mongo:4.4` (configure dans `base/mongo/statefulset.yaml`).
-
 ### SecurityContext des bases de donnees
 
-Les images officielles postgres et mongo demarrent en root pour initialiser les volumes
-(chown), puis drop vers un user non-root. Les StatefulSets ont donc :
+L'image officielle postgres demarre en root pour initialiser les volumes
+(chown), puis drop vers un user non-root. Le StatefulSet a donc :
 - `allowPrivilegeEscalation: true` (requis pour gosu/su)
 - `capabilities.add: [CHOWN, FOWNER, SETUID, SETGID, DAC_OVERRIDE]`
 

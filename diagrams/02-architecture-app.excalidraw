@@ -1131,8 +1131,8 @@
       "link": null,
       "locked": false,
       "containerId": null,
-      "originalText": "Donnees persistantes \u2014 StatefulSets + PVC",
-      "text": "Donnees persistantes \u2014 StatefulSets + PVC",
+      "originalText": "Donnees persistantes — StatefulSets + PVC",
+      "text": "Donnees persistantes — StatefulSets + PVC",
       "fontSize": 14,
       "fontFamily": 1,
       "textAlign": "left",
@@ -1200,77 +1200,8 @@
       "link": null,
       "locked": false,
       "containerId": "el_78",
-      "originalText": "PostgreSQL 14\n:5432 \u2014 5Gi",
-      "text": "PostgreSQL 14\n:5432 \u2014 5Gi",
-      "fontSize": 12,
-      "fontFamily": 1,
-      "textAlign": "center",
-      "verticalAlign": "middle",
-      "lineHeight": 1.25
-    },
-    {
-      "id": "el_80",
-      "type": "rectangle",
-      "x": 250,
-      "y": 780,
-      "width": 150,
-      "height": 55,
-      "angle": 0,
-      "strokeColor": "#2b8a3e",
-      "backgroundColor": "#d3f9d8",
-      "fillStyle": "solid",
-      "strokeWidth": 2,
-      "roughness": 1,
-      "opacity": 100,
-      "seed": 195299761,
-      "version": 1,
-      "versionNonce": 1377285107,
-      "isDeleted": false,
-      "boundElements": [
-        {
-          "id": "el_81",
-          "type": "text"
-        },
-        {
-          "id": "el_93",
-          "type": "arrow"
-        }
-      ],
-      "groupIds": [],
-      "roundness": {
-        "type": 3
-      },
-      "updated": 1,
-      "link": null,
-      "locked": false
-    },
-    {
-      "id": "el_81",
-      "type": "text",
-      "x": 260,
-      "y": 795.5,
-      "width": 130,
-      "height": 32,
-      "angle": 0,
-      "strokeColor": "#2b8a3e",
-      "backgroundColor": "transparent",
-      "fillStyle": "solid",
-      "strokeWidth": 1,
-      "roughness": 1,
-      "opacity": 100,
-      "seed": 1264749551,
-      "version": 1,
-      "versionNonce": 1518084688,
-      "isDeleted": false,
-      "boundElements": null,
-      "groupIds": [],
-      "roundness": null,
-      "updated": 1,
-      "link": null,
-      "locked": false,
-      "containerId": "el_80",
-      "originalText": "MongoDB 4.4\n:27017 \u2014 5Gi",
-      "text": "MongoDB 4.4\n:27017 \u2014 5Gi",
+      "originalText": "PostgreSQL 14\n:5432 — 5Gi",
+      "text": "PostgreSQL 14\n:5432 — 5Gi",
       "fontSize": 12,
       "fontFamily": 1,
       "textAlign": "center",
@@ -1280,7 +1211,7 @@
     {
       "id": "el_82",
       "type": "rectangle",
-      "x": 430,
+      "x": 250,
       "y": 780,
       "width": 150,
       "height": 55,
@@ -1316,7 +1247,7 @@
     {
       "id": "el_83",
       "type": "text",
-      "x": 440,
+      "x": 260,
       "y": 795.5,
       "width": 130,
       "height": 32,
@@ -1338,8 +1269,8 @@
       "link": null,
       "locked": false,
       "containerId": "el_82",
-      "originalText": "MinIO\n:9000 \u2014 10Gi",
-      "text": "MinIO\n:9000 \u2014 10Gi",
+      "originalText": "MinIO\n:9000 — 10Gi",
+      "text": "MinIO\n:9000 — 10Gi",
       "fontSize": 12,
       "fontFamily": 1,
       "textAlign": "center",
@@ -1749,56 +1680,6 @@
         ],
         [
           -305,
-          460
-        ]
-      ]
-    },
-    {
-      "id": "el_93",
-      "type": "arrow",
-      "x": 500,
-      "y": 320,
-      "width": 175,
-      "height": 460,
-      "angle": 0,
-      "strokeColor": "#1e1e1e",
-      "backgroundColor": "transparent",
-      "fillStyle": "solid",
-      "strokeWidth": 2,
-      "roughness": 1,
-      "opacity": 100,
-      "seed": 1656156017,
-      "version": 1,
-      "versionNonce": 1252766763,
-      "isDeleted": false,
-      "boundElements": [],
-      "groupIds": [],
-      "roundness": {
-        "type": 2
-      },
-      "updated": 1,
-      "link": null,
-      "locked": false,
-      "startBinding": {
-        "elementId": "el_52",
-        "focus": 0,
-        "gap": 5
-      },
-      "endBinding": {
-        "elementId": "el_80",
-        "focus": 0,
-        "gap": 5
-      },
-      "lastCommittedPoint": null,
-      "startArrowhead": null,
-      "endArrowhead": "arrow",
-      "points": [
-        [
-          0,
-          0
-        ],
-        [
-          -175,
           460
         ]
       ]

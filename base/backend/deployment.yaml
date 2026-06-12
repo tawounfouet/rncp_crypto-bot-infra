@@ -34,10 +34,6 @@ spec:
           ports:
             - containerPort: 8009
           env:
-            - name: MONGODB_HOST
-              value: mongo
-            - name: MONGODB_PORT
-              value: "27017"
             - name: POSTGRES_HOST
               value: postgres
             - name: POSTGRES_PORT

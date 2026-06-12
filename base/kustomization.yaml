@@ -5,5 +5,4 @@ resources:
   - backend
   - frontend
   - postgres
-  - mongo
   - minio

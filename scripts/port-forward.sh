@@ -6,9 +6,9 @@
 # Usage: ./port-forward.sh [dev|staging|production|infra|all]
 #
 # Ports locaux :
-#   dev        → 8009/8501/5432/27017/9000/9001
-#   staging    → 8109/8601/5532/27117/9100/9101
-#   production → 8209/8701/5632/27217/9200/9201
+#   dev        → 8009/8501/5432/9000/9001
+#   staging    → 8109/8601/5532/9100/9101
+#   production → 8209/8701/5632/9200/9201
 #   infra      → 8443 (ArgoCD) / 3000 (Grafana)
 #   all        → staging + infra
 #
@@ -57,17 +57,17 @@ forward_apps() {
   case "$ns" in
     dev)
       P_BACKEND=8009;  P_FRONTEND=8501
-      P_PG=5432;       P_MONGO=27017
+      P_PG=5432
       P_MINIO=9000;    P_MINIOC=9001
       ;;
     staging)
       P_BACKEND=8109;  P_FRONTEND=8601
-      P_PG=5532;       P_MONGO=27117
+      P_PG=5532
       P_MINIO=9100;    P_MINIOC=9101
       ;;
     production)
       P_BACKEND=8209;  P_FRONTEND=8701
-      P_PG=5632;       P_MONGO=27217
+      P_PG=5632
       P_MINIO=9200;    P_MINIOC=9201
       ;;
   esac
@@ -84,8 +84,6 @@ forward_apps() {
   kubectl --context "$CTX" port-forward -n "$ns" svc/postgres            ${P_PG}:5432 &
   echo "  PostgreSQL       → localhost:${P_PG}"
 
-  kubectl --context "$CTX" port-forward -n "$ns" svc/mongo               ${P_MONGO}:27017 &
-  echo "  MongoDB          → localhost:${P_MONGO}"
 
   kubectl --context "$CTX" port-forward -n "$ns" svc/minio               ${P_MINIO}:9000 ${P_MINIOC}:9001 &
   echo "  MinIO API        → localhost:${P_MINIO}"

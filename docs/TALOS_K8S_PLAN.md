@@ -9,7 +9,7 @@
 ### Situation actuelle
 
 - Backend FastAPI (:8009) + Frontend Streamlit (:8501)
-- BDD : PostgreSQL 14, MongoDB, MinIO (S3-compatible)
+- BDD : PostgreSQL 14, MinIO (S3-compatible)
 - CI/CD : GitLab CI (lint > test > build > deploy via SSH)
 - Infra : Docker Compose sur VM AWS DataScientest
   - staging (:8009/:8501) et production (:9009/:8502) sur la meme VM
@@ -319,7 +319,7 @@ Mais on veut 3 noeuds (1 CP + 2 workers) sur 1 machine.
     ║  ┌───────────────────┐  ┌───────────────────┐      ║
     ║  │  ns: staging      │  │  ns: production   │      ║
     ║  │  backend/frontend │  │  backend/frontend │      ║
-    ║  │  postgres/mongo   │  │  postgres/mongo   │      ║
+    ║  │  postgres         │  │  postgres         │      ║
     ║  │  minio            │  │  minio            │      ║
     ║  └───────────────────┘  └───────────────────┘      ║
     ║                                                     ║
@@ -385,7 +385,7 @@ GARANTIES :
 | Acces equipe | **Cloudflare Tunnel** | Outbound-only, zero port entrant, free tier |
 | Acces admin | **Tailscale** | Mesh VPN gratuit, traverse NAT |
 | VM AWS | **Nginx + docker-compose fallback** | Reverse proxy + resilience |
-| Backups | **CronJob K8s** | pg_dump + mongodump toutes les 6h vers VM AWS |
+| Backups | **CronJob K8s** | pg_dump toutes les 6h vers VM AWS |
 
 
 ---
@@ -889,10 +889,6 @@ crypto-bot-infra/
 │   │   ├── statefulset.yaml
 │   │   ├── service.yaml
 │   │   └── kustomization.yaml
-│   ├── mongo/
-│   │   ├── statefulset.yaml
-│   │   ├── service.yaml
-│   │   └── kustomization.yaml
 │   └── minio/
 │       ├── statefulset.yaml
 │       ├── service.yaml
@@ -949,10 +945,6 @@ spec:
           ports:
             - containerPort: 8009
           env:
-            - name: MONGODB_HOST
-              value: mongo
-            - name: MONGODB_PORT
-              value: "27017"
             - name: POSTGRES_HOST
               value: postgres
             - name: POSTGRES_PORT
@@ -1399,12 +1391,9 @@ spec:
                 - /bin/sh
                 - -c
                 - |
-                  apk add --no-cache postgresql-client mongodb-tools openssh-client
+                  apk add --no-cache postgresql-client openssh-client
                   # PostgreSQL
                   pg_dump -h postgres -U postgres crypto_bot_db | gzip > /tmp/pg_backup.sql.gz
-                  # MongoDB
-                  mongodump --host mongo --username $MONGODB_USER --password $MONGODB_PWD \
-                    --authenticationDatabase admin --archive=/tmp/mongo_backup.gz --gzip
                   # Envoyer sur la VM AWS
                   scp -i /secrets/ssh-key /tmp/*.gz ubuntu@13.37.234.206:/opt/backups/
               envFrom:
@@ -1431,7 +1420,6 @@ echo "=== Activation du fallback ==="
 # 1. Restaurer les derniers backups
 cd /opt/crypto-bot-prod
 gunzip -c /opt/backups/pg_backup.sql.gz | docker exec -i prod-postgres psql -U postgres crypto_bot_db
-docker exec -i prod-mongo mongorestore --archive --gzip < /opt/backups/mongo_backup.gz
 
 # 2. Demarrer les containers
 docker compose -f docker-compose.prod.yml up -d
@@ -1555,7 +1543,7 @@ helm install gitlab-runner gitlab/gitlab-runner \
 - [ ] Cloudflare Tunnel operationnel (equipe accede via navigateur)
 - [x] Tailscale installe (admin accede a kubectl, ArgoCD UI)
 - [ ] Nginx reverse proxy configure sur la VM AWS
-- [ ] CronJob backup toutes les 6h (PostgreSQL + MongoDB → VM AWS)
+- [ ] CronJob backup toutes les 6h (PostgreSQL → VM AWS)
 - [ ] Script fallback.sh teste (docker-compose demarre + Nginx bascule)
 - [ ] Script restore-normal.sh teste
 
