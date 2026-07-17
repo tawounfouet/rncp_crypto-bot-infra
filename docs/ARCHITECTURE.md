@@ -6,10 +6,19 @@
 
 - Backend FastAPI (:8009) + Frontend Streamlit (:8501)
 - BDD : PostgreSQL 14, MinIO (S3-compatible)
-- CI/CD : GitLab CI (lint > test > build > deploy via SSH)
-- Infra : Docker Compose sur VM AWS DataScientest
-  - staging (:8009/:8501) et production (:9009/:8502) sur la meme VM
-- Registry : GitLab Container Registry (`registry.gitlab.com/dst_crypto/crypto-bot`)
+- Infra : cluster Kubernetes (Talos) sur le serveur Proxmox — staging et
+  production tournent en namespaces separes, deployees via GitOps ArgoCD
+  (voir §5)
+- CI/CD : GitLab CI (lint > test > build > update:manifests → ArgoCD sync)
+- VM AWS DataScientest : reverse proxy + backups off-site + fallback
+  docker-compose (bascule uniquement si le Proxmox tombe, voir §5)
+- Registry : GitLab Container Registry (`registry.gitlab.com/dst_crypto/crypto-bot-app`)
+
+> **Avant la migration K8s** (contexte historique) : l'application tournait
+> entierement en Docker Compose sur la VM AWS, staging (:8009/:8501) et
+> production (:9009/:8502) sur la meme machine, deploiement CI via SSH.
+> C'est ce constat de depart (VM unique, pas de redondance, SSH deploy) qui
+> a motive l'analyse comparative ci-dessous.
 
 ### Materiel disponible
 
@@ -17,14 +26,13 @@
 |-----------|-------|------|
 | **Serveur Proxmox (P1)** | 64 GB RAM, 512 GB SSD | Cluster K8s complet |
 | VM AWS DataScientest | 2 vCPU, 7.6 GB RAM, 29 GB | Reverse proxy + fallback |
-| Dell Precision 3580 | i7 13e gen, 32 GB RAM | Dev local |
+| Dell Inspiron 5515 | 16 GB RAM | Dev local |
 
 ### Contraintes
 
 | Contrainte | Impact |
 |------------|--------|
-| Proxmox derriere NAT entreprise | Pas d'IP publique → tunnel outbound-only |
-| Proxmox = serveur d'entreprise | Securisation obligatoire, justifiable au RSI |
+| Proxmox derriere le NAT de la box internet | Pas d'IP publique → tunnel outbound-only (Tailscale) |
 | VM AWS : 8.9 GB disque libre | Role minimal : reverse proxy + backups |
 | Equipe projet | Doivent acceder a l'app via Cloudflare Tunnel |
 
@@ -135,7 +143,7 @@ Total : ~283 EUR/mois             Total : ~7 EUR/mois
 ### Isolation reseau
 
 ```
-Reseau entreprise (LAN)
+Reseau domestique (LAN)
     │
     ├── Proxmox host (interface management, vmbr0)
     │
@@ -147,8 +155,8 @@ Reseau entreprise (LAN)
               └── Tunnel sortant uniquement → VM AWS / Cloudflare
 ```
 
-- VMs K8s sur un bridge dedie (`vmbr1`), **isole du LAN entreprise**
-- **Zero port entrant** sur le firewall corporate
+- VMs K8s sur un bridge dedie (`vmbr1`), **isole du reste du LAN**
+- **Zero port entrant** sur la box internet
 - Tunnel outbound-only (Cloudflare Tunnel ou WireGuard)
 
 ### Controle d'acces par couche
@@ -177,15 +185,111 @@ Reseau entreprise (LAN)
 
 ### Vue globale — Flux GitOps
 
-![Vue globale](../diagrams/01-vue-globale.svg)
+```mermaid
+flowchart TB
+    DEV[Developpeur] -->|git push| CI["crypto-bot-app CI\ntest → build → push images"]
+    CI -->|"images :staging / :vX.Y.Z"| REG[(GitLab Registry)]
+
+    CI -->|"deploy:staging (auto)\ndeploy:production (manuel)"| VMAWS["VM AWS\ndocker-compose\nstaging + production"]
+    CI -->|"update:manifests\ncommit annotation"| INFRA["crypto-bot-infra/main"]
+
+    INFRA --> ARGOCD{ArgoCD}
+    ARGOCD -->|auto-sync| K8S_STAGING["K8s staging"]
+    ARGOCD -->|sync manuel| K8S_PROD["K8s production"]
+
+    REG -.->|pull image| K8S_STAGING
+    REG -.->|pull image| K8S_PROD
+
+    K8S_STAGING --> LOGS["Loki + Promtail + Grafana"]
+    K8S_PROD --> LOGS
+
+    style K8S_STAGING fill:#c3fae8,stroke:#087f5b
+    style K8S_PROD fill:#ffe3e3,stroke:#e03131
+    style VMAWS fill:#fff3bf,stroke:#e67700
+```
+
+> Le cluster K8s (via ArgoCD, GitOps pull-based) est la cible principale.
+> La VM AWS recoit un deploiement direct (SSH) a chaque release, ce qui la
+> maintient a jour en permanence pour servir de bascule immediate si le
+> Proxmox tombe (voir mecanisme de fallback ci-dessous).
 
 ### Architecture applicative
 
-![Architecture applicative](../diagrams/02-architecture-app.svg)
+```mermaid
+flowchart TB
+    USER[Utilisateur] --> ING["Ingress NGINX\n/ → frontend, /api → backend"]
+    ING --> FE["Frontend\nStreamlit :8501"]
+    ING --> BE["Backend\nFastAPI :8009"]
+
+    FE -->|API call| BE
+
+    subgraph ROUTERS["API Routers"]
+        R1["/v1/auth"]
+        R2["/v1/trading"]
+        R3["/v1/market"]
+    end
+    BE --> ROUTERS
+
+    subgraph SERVICES["Services metier"]
+        S1[AuthService]
+        S2[TradingService]
+        S3[BacktestEngine]
+    end
+    ROUTERS --> SERVICES
+
+    subgraph STRATEGIES["Strategies"]
+        ST1["Moving Average"]
+        ST2["RSI / Bollinger"]
+    end
+    SERVICES --> STRATEGIES
+
+    BE --> PG[("PostgreSQL 14\n:5432 — 5Gi")]
+    BE --> MINIO[("MinIO\n:9000 — 10Gi")]
+    BE -->|API call| BINANCE["Binance API\n(externe)"]
+```
 
 ### Infrastructure Kubernetes
 
-![Infrastructure K8s](../diagrams/03-infra-k8s.svg)
+```mermaid
+flowchart TB
+    subgraph NET["Reseau"]
+        TS["Tailscale\nsubnet routing"]
+        BR["vmbr1\n10.10.0.0/24"]
+    end
+
+    subgraph PROXMOX["Proxmox VE — Cluster Talos K8s"]
+        CP["Control Plane\n10.10.0.125:6443"]
+        W1["Worker 1\n10.10.0.112"]
+        W2["Worker 2\n10.10.0.163"]
+    end
+    NET --> PROXMOX
+
+    subgraph K8SINFRA["Couche infrastructure K8s"]
+        MLB["MetalLB\nL2 .240-.250"]
+        NGINX["Ingress NGINX\n.240"]
+        LPP["local-path\nprovisioner"]
+        SS["Sealed Secrets\nv0.29.0"]
+        ARGO["ArgoCD\nv3.3.2"]
+    end
+    PROXMOX --> K8SINFRA
+
+    subgraph NAMESPACES["Namespaces applicatifs"]
+        DEVNS["dev\nbackend frontend postgres minio"]
+        STGNS["staging (auto-sync)\nbackend frontend postgres minio"]
+        PRODNS["production (manuel)\nbackend frontend postgres minio"]
+    end
+    K8SINFRA --> NAMESPACES
+
+    subgraph MON["Monitoring — ns: monitoring (ArgoCD GitOps)"]
+        PROM["Promtail (3x DaemonSet)"]
+        LOKI["Loki — PVC 5Gi"]
+        GRAF["Grafana 10.3.3 — :3000"]
+    end
+    NAMESPACES --> MON
+
+    style STGNS fill:#c3fae8,stroke:#087f5b
+    style PRODNS fill:#ffe3e3,stroke:#e03131
+```
 
 ### Mecanisme de fallback
 
@@ -256,3 +360,49 @@ Le namespace `dev` n'est pas gere par ArgoCD — deploiement manuel via `dev-dep
 | Acces admin | **Tailscale** | Mesh VPN gratuit, traverse NAT |
 | VM AWS | **Nginx + docker-compose** | Reverse proxy + resilience |
 | Backups | **CronJob K8s** | pg_dump toutes les 6h vers VM AWS |
+
+### Pourquoi 3 VMs Talos sur 1 seul serveur physique
+
+```
+1 serveur physique + Talos bare-metal = 1 seul noeud Kubernetes
+
+Mais on veut 3 noeuds (1 CP + 2 workers) sur 1 machine.
+→ Proxmox cree 3 VMs, chaque VM boot sur Talos ISO.
+→ Chaque VM = un noeud K8s independant.
+```
+
+Proxmox agit comme hyperviseur : chaque VM Talos est un noeud K8s a part
+entiere (isolation memoire/CPU/disque via KVM), ce qui permet de simuler un
+vrai cluster multi-noeuds sur un seul serveur.
+
+---
+
+## 6. Points de soutenance
+
+### Narrative recommandee
+
+> "Nous avons une architecture hybride on-premise + cloud :
+> - Un cluster Kubernetes Talos OS sur un serveur Proxmox heberge
+>   staging et production avec un workflow GitOps ArgoCD.
+> - Une VM AWS sert de point d'entree (reverse proxy) et de filet
+>   de securite : en cas de panne du serveur, un fallback docker-compose
+>   prend le relais avec les derniers backups (RPO 6h, RTO 2 min).
+> - L'equipe accede a l'application via Cloudflare Tunnel, sans aucun
+>   port ouvert sur la box internet.
+> - L'infrastructure est entierement reproductible depuis Git : on peut
+>   recreer le cluster en 30 minutes, ArgoCD redeploie tout (voir INSTALL.md).
+> - Cette architecture offre la meme resilience qu'un full cloud AWS
+>   pour 97.5% moins cher (~7 EUR/mois vs ~283 EUR/mois)."
+
+### Points techniques a mettre en avant
+
+1. **Talos OS** : OS immutable, pas de SSH, gestion 100% API = securite renforcee
+2. **GitOps pull-based** : ArgoCD surveille Git et reconcilie (pas de push depuis le CI)
+3. **Kustomize** : meme base de manifests, overlays par environnement
+4. **Architecture hybride** : K8s on-premise + cloud minimal (reverse proxy + backups)
+5. **Fallback automatise** : docker-compose sur VM AWS avec backups toutes les 6h
+6. **Infra reproductible** : cluster jetable, Git est la source de verite
+7. **Resilience** : 2 workers K8s, pods reschedulables, fallback cloud
+8. **Securisation** : bridge isole, RBAC, Sealed Secrets, Cloudflare Tunnel, zero port entrant
+9. **Monitoring** : Loki + Promtail + Grafana pour les logs centralises de tous les pods
+10. **Optimisation des couts** : 97.5% d'economie vs full cloud AWS

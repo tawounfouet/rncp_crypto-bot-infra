@@ -1,8 +1,27 @@
 # Onboarding Equipe — Acces au Cluster Kubernetes
 
 > Pour comprendre l'architecture globale du projet, voir [ARCHITECTURE.md](ARCHITECTURE.md).
+> Pour reconstruire le cluster depuis zero (disaster recovery total), voir [INSTALL.md](INSTALL.md).
 
-![Infrastructure K8s](../diagrams/03-infra-k8s.svg)
+> Diagramme de l'infrastructure K8s : voir [ARCHITECTURE.md §5](ARCHITECTURE.md#5-architecture-cible).
+
+```mermaid
+flowchart LR
+    LAPTOP["Laptop Admin"]
+
+    LAPTOP -->|VPN entreprise| PROXMOX_UI["Proxmox\nWeb UI :8006 / Shell SSH :22"]
+    LAPTOP -->|"Tailscale VPN\nsubnet 10.10.0.0/24"| K8S_API["K8s API :6443\nkubeconfig admin@crypto-bot"]
+    LAPTOP -->|SSH internet| VMAWS["VM AWS\ndocker-compose (fallback)"]
+
+    K8S_API --> NAMESPACES["kubectl port-forward\nscripts/port-forward.sh"]
+    NAMESPACES --> DEV["dev"]
+    NAMESPACES --> STAGING["staging"]
+    NAMESPACES --> PROD["production"]
+    NAMESPACES --> INFRA["infra\nArgoCD :8443 / Grafana :3000"]
+```
+
+> Detail des ports par environnement (frontend, backend, PostgreSQL, MinIO) :
+> voir la table en fin de document, section "Acces aux services".
 
 ## Prerequis
 
@@ -440,18 +459,23 @@ plusieurs environnements en parallele (un terminal par environnement).
 
 #### Identifiants ArgoCD / Grafana
 
-- **ArgoCD** — user `admin`, mot de passe = secret `argocd-initial-admin-secret` :
+- **ArgoCD** — user `admin`, mot de passe **non recuperable via kubectl**
+  (ArgoCD ne stocke qu'un hash bcrypt dans `argocd-secret`, pas de secret
+  Kubernetes en clair). Le secret `argocd-initial-admin-secret` n'existe plus
+  (supprime apres la premiere rotation, pratique recommandee). Demander le
+  mot de passe a l'admin (gestionnaire de mots de passe) ou en generer un
+  nouveau : `./scripts/rotate_secrets.sh argocd`.
+
+- **Grafana** — user `admin`, mot de passe dans le secret `grafana-admin`
+  (namespace `monitoring`), toujours defini via SealedSecret (pas de defaut
+  `admin`/`admin` en pratique) :
 
   ```bash
-  kbot -n argocd get secret argocd-initial-admin-secret \
-    -o jsonpath='{.data.password}' | base64 -d && echo
+  kbot -n monitoring get secret grafana-admin \
+    -o jsonpath='{.data.admin-password}' | base64 -d && echo
   ```
 
-  > Si le secret est absent, c'est qu'il a ete supprime apres un premier login
-  > (mot de passe alors deja change). Demander a l'admin.
-
-- **Grafana** — identifiants par defaut `admin` / `admin` (a changer au 1er login),
-  sauf si surcharges via le secret `monitoring-grafana` du namespace `monitoring`.
+  Pour en generer un nouveau : `./scripts/rotate_secrets.sh grafana`.
 
 ### Port-forward manuel (un service a la fois)
 
@@ -592,10 +616,25 @@ procedure manuelle au [§6](#6-modifier-un-secret-kubeseal).
 
 ### 9.5 Mot de passe ArgoCD / Grafana
 
+Meme script que pour les secrets applicatifs :
+
 ```bash
-kbot -n argocd exec -it deployment/argocd-server -- argocd account update-password
-# Grafana : changer via l'UI (namespace monitoring)
+./scripts/rotate_secrets.sh argocd
+./scripts/rotate_secrets.sh grafana
 ```
+
+`argocd` : recupere le mot de passe actuel depuis `argocd-initial-admin-secret`
+si present (sinon le demande), change le mot de passe via `argocd account
+update-password`, verifie la connexion avec le nouveau mot de passe, puis
+supprime le secret initial devenu obsolete. Le nouveau mot de passe est
+affiche une seule fois en fin de script — a noter immediatement dans un
+gestionnaire de mots de passe.
+
+`grafana` : re-scelle `monitoring/grafana-admin-sealed.yaml` avec un nouveau
+mot de passe et redemarre le pod. Le stockage Grafana est ephemere
+(`emptyDir`), donc chaque redemarrage re-initialise proprement l'admin depuis
+les variables d'environnement (`GF_SECURITY_ADMIN_PASSWORD`) — pas de risque
+de mot de passe "coince" comme sur PostgreSQL/MinIO.
 
 ### 9.6 Verifier l'historique Git
 

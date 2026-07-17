@@ -1,354 +1,158 @@
-# Git Workflow - Crypto-Bot
+# Git Workflow — Crypto-Bot
 
-Sync bidirectionnel entre les 3 repos applicatifs.
+> `crypto-bot-app` est un **monorepo** (backend + frontend dans le meme repo,
+> plus de submodules). `crypto-bot-infra` reste un repo separe (manifests
+> K8s), mis a jour automatiquement par la CI de `crypto-bot-app`.
 
 ## Organisation des repos
 
-![Organisation des repos](../diagrams/05-repos-organisation.svg)
-
 | Repo | Contenu | CI |
 |------|---------|-----|
-| **crypto-bot** | Orchestration, docker-compose, CI principal, scripts | Test + Build + Sync submodules + Deploy |
-| **backend** | Code FastAPI (submodule de crypto-bot) | Test + Sync parent |
-| **frontend** | Code Streamlit (submodule de crypto-bot) | Lint + Sync parent |
-| **crypto-bot-infra** | Manifests K8s (Kustomize, ArgoCD) | Pas de CI (ArgoCD pull) |
-
-## Pipeline CI/CD
-
-![Pipeline CI/CD](../diagrams/04-pipeline-cicd.svg)
+| **crypto-bot-app** | Backend FastAPI + Frontend Streamlit (monorepo), CI complet | lint → build → test → deploy |
+| **crypto-bot-infra** | Manifests K8s (Kustomize, ArgoCD) | Pas de CI applicative (verify.sh en local, ArgoCD pull) |
 
 ## Branches
 
-| Branche | Role | Protection |
-|---------|------|------------|
-| `feature/*`, `dev_*` | Travail quotidien | Aucune |
-| `staging` | Integration / test | MR requise, 0 approbation |
-| `main` | Production | MR requise, 1+ approbation |
+| Branche | Role | Pipeline declenche |
+|---------|------|---------------------|
+| `dev_*`, `feature/*` | Travail quotidien | Lint seul (pipeline complet si une MR est ouverte, evite les doublons) |
+| `staging` | Integration / test | Pipeline complet : lint → build → test → deploy (auto, staging) |
+| `main` | Miroir de release | **Aucun pipeline** — le deploiement se fait via un tag `vX.Y.Z` |
 
-Les 3 repos app (crypto-bot, backend, frontend) ont les **memes branches**.
-Le CI les synchronise automatiquement.
+Flux standard : `feature/*` → MR vers `staging` (CI verte requise) → merge →
+deploiement automatique staging → quand pret, MR `staging` → `main` (review +
+approbation) → tag `vX.Y.Z` sur `main` → build + deploiement production
+(manuel).
 
+---
 
-## Diagramme global
-
-```mermaid
-flowchart TB
-    subgraph DEV["Developpeur"]
-        D1[Travaille sur backend/]
-        D2[Travaille sur frontend/]
-        D3[Travaille sur les deux]
-    end
-
-    subgraph REPOS["Repos GitLab"]
-        BE[backend repo]
-        FE[frontend repo]
-        CB[crypto-bot repo]
-    end
-
-    D1 -->|git push| BE
-    D2 -->|git push| FE
-    D3 -->|scripts/push.sh| CB
-
-    subgraph CI_BE["CI Backend"]
-        BE_TEST[lint + test]
-        BE_SYNC["sync:parent\n→ crypto-bot"]
-    end
-
-    subgraph CI_FE["CI Frontend"]
-        FE_TEST[lint]
-        FE_SYNC["sync:parent\n→ crypto-bot"]
-    end
-
-    subgraph CI_CB["CI Crypto-bot"]
-        CB_TEST["lint + test\n⛔ skip si ci(...)"]
-        CB_BUILD["build images\n✅ tourne toujours"]
-        CB_SYNC["sync:submodules\n⛔ skip si ci(...)\n🔍 controle ancestralite"]
-        CB_MANIFESTS["update:manifests\n✅ tourne toujours"]
-        CB_DEPLOY[deploy VM AWS]
-    end
-
-    BE -->|merge staging| CI_BE
-    FE -->|merge staging| CI_FE
-    CB -->|merge staging| CI_CB
-
-    BE_TEST --> BE_SYNC
-    FE_TEST --> FE_SYNC
-
-    BE_SYNC -->|"commit ci(backend):..."| CB
-    FE_SYNC -->|"commit ci(frontend):..."| CB
-
-    CB_TEST --> CB_BUILD
-    CB_BUILD --> CB_SYNC
-    CB_SYNC -->|"push si parent ahead\nskip si submodule ahead"| BE
-    CB_SYNC -->|"push si parent ahead\nskip si submodule ahead"| FE
-    CB_BUILD --> CB_MANIFESTS
-    CB_BUILD --> CB_DEPLOY
-    CB_MANIFESTS -->|"commit infra"| INFRA
-
-    subgraph K8S["Deploiement principal"]
-        INFRA[crypto-bot-infra]
-        ARGOCD_NODE["ArgoCD\nauto-sync staging\nsync manuel prod"]
-    end
-
-    subgraph FALLBACK["Fallback VM AWS"]
-        DOCKER["docker-compose\n(deploy SSH)"]
-    end
-
-    INFRA --> ARGOCD_NODE
-    CB_DEPLOY -->|"SSH deploy"| DOCKER
-
-    subgraph ANTIBOUCLE["Anti-boucle"]
-        RULE["commit ci(...) →\nskip tests + sync:submodules\nbuild + manifests tournent"]
-    end
-
-    style ANTIBOUCLE fill:#ff9,stroke:#f90
-```
-
-
-## Flux detaille : staging
-
-### Cas A — Dev travaille sur un seul composant (ex: backend)
+## Pipeline CI/CD
 
 ```mermaid
-sequenceDiagram
-    participant Dev
-    participant Backend as backend repo
-    participant CI_BE as CI Backend
-    participant CryptoBot as crypto-bot repo
-    participant CI_CB as CI Crypto-bot
-    participant Registry as GitLab Registry
-    participant Infra as crypto-bot-infra
-    participant ArgoCD
+flowchart LR
+    subgraph LINT["Stage: lint"]
+        L1[lint:versions]
+        L2[lint:dockerfile:backend/frontend]
+        L3[semgrep_sast]
+        L4[lint:python — ruff]
+    end
 
-    Dev->>Backend: git push origin dev_nath
-    Dev->>Backend: MR dev_nath → staging
-    Dev->>Backend: Merge MR
+    subgraph BUILD["Stage: build"]
+        B1[build:docker<br/>backend + frontend]
+        B2[scan:images — trivy]
+        B3[validate_tag<br/>tags uniquement]
+    end
 
-    Backend->>CI_BE: Pipeline staging
-    CI_BE->>CI_BE: lint + test ✓
-    CI_BE->>CryptoBot: sync:parent (update submodule pointer)
-    Note over CI_BE,CryptoBot: commit "ci(backend): update to abc1234"
+    subgraph TEST["Stage: test"]
+        T1[test:integration<br/>docker-compose + postgres reel]
+    end
 
-    CryptoBot->>CI_CB: Pipeline staging (commit ci(...))
-    Note over CI_CB: Tests SKIPPED (anti-boucle ci(...))
-    CI_CB->>Registry: build:docker → images :staging ✅
-    Note over CI_CB: Build tourne meme sur ci(...)
-    CI_CB->>Backend: sync:submodules → SKIPPED (anti-boucle ci(...))
-    CI_CB->>Infra: update:manifests → annotation deployed-commit ✅
-    CI_CB->>CI_CB: deploy:staging (VM AWS)
+    subgraph DEPLOY["Stage: deploy"]
+        D1[create_release<br/>tags uniquement]
+        D2[deploy:staging<br/>SSH → VM AWS]
+        D3[deploy:production<br/>SSH → VM AWS — MANUEL]
+        D4[update:manifests<br/>GitOps → crypto-bot-infra]
+    end
 
-    ArgoCD->>Infra: Detect annotation change
-    ArgoCD->>ArgoCD: Auto-sync K8s staging
+    LINT --> BUILD --> TEST --> DEPLOY
+
+    D4 -->|commit + push| INFRA[crypto-bot-infra/main]
+    INFRA --> ARGOCD{ArgoCD}
+    ARGOCD -->|auto-sync| K8S_STAGING[K8s staging]
+    ARGOCD -->|sync manuel| K8S_PROD[K8s production]
+
+    D2 --> VM_STAGING[VM AWS :8009 staging]
+    D3 --> VM_PROD[VM AWS :9009 production]
 ```
 
-> **Flux identique pour le frontend** : MR sur frontend → `sync:parent` → crypto-bot CI → build → deploy
+### Declencheurs par branche/evenement
 
-### Cas B — Dev travaille sur les deux (backend + frontend)
+| Evenement | lint | build | test | deploy |
+|-----------|------|-------|------|--------|
+| Push `dev_*`/`feature/*` (sans MR ouverte) | ✅ | — | — | — |
+| MR ouverte (vers staging ou main) | ✅ | ✅ | ✅ | — |
+| Push `staging` | ✅ | ✅ | ✅ | ✅ (staging, auto) |
+| Tag `vX.Y.Z` | — | ✅ | ✅ | ✅ (production, **manuel**) |
+| Push `main` | — | — | — | — (pas de pipeline) |
 
-```mermaid
-sequenceDiagram
-    participant Dev
-    participant Backend as backend repo
-    participant Frontend as frontend repo
-    participant CryptoBot as crypto-bot repo
-    participant CI_CB as CI Crypto-bot
-    participant Registry as GitLab Registry
-    participant Infra as crypto-bot-infra
-    participant ArgoCD
+### Detail des jobs
 
-    Dev->>Dev: Modifie backend/ et frontend/
-    Dev->>Dev: Commit dans chaque submodule + parent
-    Dev->>CryptoBot: ./scripts/push.sh dev_nath
-    Note over Dev,CryptoBot: Push backend + frontend + crypto-bot
+**Lint** :
+- `lint:versions` — verifie que `versions.env` (source unique des versions d'images) et les `variables:` du `.gitlab-ci.yml` sont synchronises
+- `lint:dockerfile:backend` / `:frontend` — hadolint (bonnes pratiques Dockerfile)
+- `semgrep_sast` — scan securite (injections, SSRF...), bloquant
+- `lint:python` — ruff check + format (backend + frontend)
 
-    Dev->>CryptoBot: MR dev_nath → staging
-    Dev->>CryptoBot: Merge MR
+**Build** :
+- `build:docker` — build backend (target `runtime` + `test`) et frontend, push vers le GitLab Registry. Tags selon le contexte (voir ci-dessous)
+- `scan:images` — trivy, CVE CRITICAL bloquantes (non-fixables ignorees)
+- `validate_tag` — verifie le format SemVer du tag (`vX.Y.Z` ou `vX.Y.Z-suffix`)
 
-    CryptoBot->>CI_CB: Pipeline staging
-    CI_CB->>CI_CB: lint + test ✓
-    CI_CB->>Registry: build:docker → images :staging
+**Test** :
+- `test:integration` — lance l'image Docker **buildee** (pas le code source) avec un vrai PostgreSQL via `docker-compose.test.yml`. Garantit qu'on teste exactement ce qui sera deploye. Rapports JUnit + coverage Cobertura.
 
-    Note over CI_CB,Frontend: sync:submodules avec controle ancestralite
-    CI_CB->>Backend: push si parent ahead / skip si submodule ahead
-    CI_CB->>Frontend: push si parent ahead / skip si submodule ahead
-    Note over CI_CB,Frontend: commit normal → submodule CI voit ci(...) → skip sync:parent
+**Deploy** :
+- `create_release` — cree une GitLab Release sur tag
+- `deploy:staging` / `stop:staging` — SSH vers la VM AWS, `docker compose -f docker-compose.staging.yml up -d`, health check `/health`. Automatique a chaque push staging.
+- `deploy:production` / `stop:production` — idem sur `docker-compose.prod.yml`, avec backup DB avant deploiement. **Manuel**, declenche sur tag.
+- `update:manifests` — met a jour `crypto-bot-infra/main` (voir ci-dessous), qui declenche ArgoCD
 
-    CI_CB->>Infra: update:manifests → annotation deployed-commit
-    CI_CB->>CI_CB: deploy:staging (VM AWS)
+### Deux cibles de deploiement en parallele
 
-    ArgoCD->>Infra: Detect annotation change
-    ArgoCD->>ArgoCD: Auto-sync K8s staging
-```
+Chaque release (push staging / tag production) deploie **a la fois** :
 
-### Cas C — Passage en production
+1. **VM AWS** (`deploy:staging`/`deploy:production`) — SSH direct + `docker compose up`, deploiement classique
+2. **Cluster K8s** (`update:manifests` → ArgoCD) — vrai GitOps pull-based, source de verite = Git
 
-```mermaid
-sequenceDiagram
-    participant Lead as Tech Lead
-    participant CryptoBot as crypto-bot repo
-    participant CI_CB as CI Crypto-bot
-    participant Registry as GitLab Registry
-    participant ArgoCD
-
-    Lead->>CryptoBot: MR staging → main
-    Lead->>Lead: Code review + approbation
-    Lead->>CryptoBot: Merge MR
-
-    Lead->>CryptoBot: git tag v1.1
-    Lead->>CryptoBot: git push origin v1.1
-
-    CryptoBot->>CI_CB: Pipeline tag v1.1
-    CI_CB->>CI_CB: lint + test ✓
-    CI_CB->>Registry: build → images :v1.1 + :production
-    CI_CB->>CI_CB: deploy:production (manuel)
-
-    Lead->>ArgoCD: Sync manuel production
-    ArgoCD->>ArgoCD: Deploy K8s production
-```
-
-
-## Anti-boucle
-
-Le mecanisme qui empeche les boucles infinies sans bloquer le build :
-
-```
-Sens montant : backend merge staging
-  → CI sync:parent → commit "ci(backend):..." sur crypto-bot staging
-  → crypto-bot CI declenche :
-      ⛔ tests SKIP          (commit ci(...))
-      ✅ build:docker TOURNE (images :staging)
-      ⛔ sync:submodules SKIP (commit ci(...)) → PAS de re-push → STOP ✓
-      ✅ update:manifests TOURNE (annotation → ArgoCD sync)
-      ✅ deploy:staging TOURNE (VM AWS)
-
-Sens descendant : crypto-bot merge staging (commit normal)
-  → CI sync:submodules → controle ancestralite :
-      Si submodule ahead → SKIP (ne pas ecraser)
-      Si parent ahead → push normal (pas de force-push)
-  → push cree un commit sur backend/frontend staging
-  → submodule CI declenche → sync:parent → commit "ci(...):" sur crypto-bot
-  → crypto-bot CI → voit ci(...) → sync:submodules SKIP → STOP ✓
-```
-
-**Regle par job** (commit `ci(`) :
-
-| Job | Skip sur `ci(` ? | Raison |
-|-----|------------------|--------|
-| `check:backend` | Oui | Deja teste dans le submodule |
-| `lint:frontend` | Oui | Deja teste dans le submodule |
-| `build:docker` | **Non** | Doit construire les nouvelles images |
-| `sync:submodules` | Oui | Empeche la boucle infinie |
-| `update:manifests` | **Non** | Doit mettre a jour ArgoCD |
-| `deploy:staging` | **Non** | Doit deployer sur VM AWS |
-
-### Controle d'ancestralite (sync:submodules)
-
-Avant de push vers un submodule, `sync:submodules` verifie :
-
-```
-1. SHA identique      → "Already up to date" → skip
-2. Submodule en avance → "AHEAD, skipping"    → skip (ne pas ecraser une MR mergee)
-3. Parent en avance    → push normal           → PAS de --force
-4. Push echoue         → warning               → intervention manuelle requise
-```
-
-
-## Quand utiliser scripts/push.sh
-
-| Situation | Commande | Pourquoi |
-|-----------|----------|----------|
-| Travail sur **backend** uniquement | `cd backend && git push` | Le sync:parent met a jour crypto-bot |
-| Travail sur **frontend** uniquement | `cd frontend && git push` | Le sync:parent met a jour crypto-bot |
-| Travail sur **les deux** depuis crypto-bot | `./scripts/push.sh` | Push les 3 repos d'un coup |
-| Travail sur **CI/docker-compose** uniquement | `git push` | Pas de submodule a sync |
-
-
-## Exemple concret : scripts/push.sh
-
-Scenario : on a modifie le backend et le frontend depuis le repo crypto-bot.
+`update:manifests` clone `crypto-bot-infra`, puis :
 
 ```bash
-# 1. On est dans crypto-bot/ sur la branche staging
-cd ~/Crypto-bot
-git checkout staging
+# Staging : annotation seule (le tag d'image :staging ne change pas)
+sed -i 's/deployed-commit: ".*"/deployed-commit: "<sha>"/' overlays/staging/kustomization.yaml
 
-# 2. Modifier le backend
-cd backend
-# ... editer des fichiers ...
-git add .
-git commit -m "feat: ajouter endpoint /v1/market/history"
+# Production : tag versionne + annotation
+sed -i "s|backend:.*|backend:<vX.Y.Z>|g" overlays/production/kustomization.yaml
+sed -i 's/deployed-commit: ".*"/deployed-commit: "<sha>"/' overlays/production/kustomization.yaml
 
-# 3. Modifier le frontend
-cd ../frontend
-# ... editer des fichiers ...
-git add .
-git commit -m "feat: page historique marche"
-
-# 4. Revenir au parent et commiter les references submodules
-cd ..
-git add backend frontend
-git commit -m "feat: historique marche (backend + frontend)"
-
-# 5. Tout pusher d'un coup avec push.sh
-./scripts/push.sh staging
+git commit -m "ci(gitops): ..." && git push origin main
 ```
 
-Ce que fait `push.sh` :
-1. `cd backend && git push origin staging` (push le submodule d'abord)
-2. `cd frontend && git push origin staging` (push le submodule d'abord)
-3. `git push origin staging` (push le parent)
+ArgoCD detecte le changement dans `crypto-bot-infra` et synchronise (auto
+pour staging, manuel pour production — voir [ARCHITECTURE.md](ARCHITECTURE.md) §5).
 
-> **Pourquoi cet ordre ?** Si on pushait le parent en premier, la CI essaierait
-> de sync les submodules mais les commits referencies n'existeraient pas encore
-> sur le remote. En pushant les submodules d'abord, on s'assure que les SHA
-> sont deja disponibles.
+---
 
+## Tags d'image Docker
+
+| Contexte | Tags pousses |
+|----------|--------------|
+| MR (test) | `test-<pipeline_iid>` |
+| Push `staging` | `staging`, `latest` |
+| Tag `vX.Y.Z` | `vX.Y.Z`, `production`, `latest` |
+
+---
 
 ## Variables CI requises
 
-### Variable de GROUPE (GitLab > Groupe dst_crypto > Settings > CI/CD > Variables)
+GitLab > `crypto-bot-app` > Settings > CI/CD > Variables :
 
-| Variable | Valeur | Scope |
-|----------|--------|-------|
-| `GROUP_PAT_TOKEN` | PAT avec scopes `write_repository` + `read/write_registry` | Toutes branches |
+| Variable | Usage | Scope |
+|----------|-------|-------|
+| `GROUP_PAT_TOKEN` | PAT `write_repository`, push vers `crypto-bot-infra` (job `update:manifests`) | Toutes branches |
+| `SSH_PRIVATE_KEY` | Cle SSH pour deploy VM AWS | staging, tags |
+| `VM_HOST` | IP/hostname de la VM AWS | staging, tags |
+| `SSH_USER` | Utilisateur SSH sur la VM AWS | staging, tags |
 
-> Un seul PAT, configure une seule fois au niveau du groupe.
-> Accessible automatiquement par les 3 repos (backend, frontend, crypto-bot).
+`GROUP_PAT_TOKEN` : creer sur GitLab > Avatar > Edit profile > Access Tokens
+(scope `write_repository`, expiration 1 an max), puis l'ajouter comme variable
+de **groupe** `dst_crypto` (Protected: non, Masked: oui) pour qu'il soit
+accessible sans duplication si d'autres repos en ont besoin.
 
-### Comment creer le GROUP_PAT_TOKEN
-
-1. **Creer le PAT** : GitLab > Avatar (coin haut droit) > Edit profile > Access Tokens
-   - Name : `group-ci-sync`
-   - Expiration : 1 an max
-   - Scopes : `write_repository`, `read_registry`, `write_registry`
-   - Cliquer "Create personal access token"
-   - **Copier le token** (commence par `glpat-`, affiche une seule fois)
-
-2. **Ajouter comme variable de groupe** : GitLab > Groupe `dst_crypto` > Settings > CI/CD > Variables
-   - Key : `GROUP_PAT_TOKEN`
-   - Value : coller le PAT
-   - Type : Variable
-   - Protected : Non (sinon pas accessible sur staging)
-   - Masked : Oui
-   - Cliquer "Add variable"
-
-> Le token est maintenant accessible dans les 3 repos (backend, frontend, crypto-bot)
-> sans avoir a le configurer 3 fois.
-
-### Variables supplementaires sur **crypto-bot** uniquement
-
-| Variable | Valeur | Scope |
-|----------|--------|-------|
-| `SSH_PRIVATE_KEY` | Cle SSH pour deploy VM AWS | staging, prod |
-| `VM_HOST` | `13.37.234.206` | staging, prod |
-| `SSH_USER` | `ubuntu` | staging, prod |
-
+---
 
 ## Protection des branches
 
-### Sur les 3 repos (backend, frontend, crypto-bot)
-
 | Branche | Push direct | MR | Approbations |
 |---------|------------|-----|-------------|
-| `staging` | Interdit (sauf CI token) | Oui | 0 (merge libre apres CI vert) |
+| `staging` | Interdit (sauf CI token) | Oui | 0 (merge libre apres CI verte) |
 | `main` | Interdit | Oui | 1 minimum |
