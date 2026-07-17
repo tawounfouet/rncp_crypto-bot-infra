@@ -104,10 +104,18 @@ Le cluster K8s est sur un reseau isole (10.10.0.0/24) derriere le Proxmox.
 
 **Methode principale — Tailscale (recommande)** :
 
-1. Installe Tailscale : https://tailscale.com/download
+1. Installe Tailscale :
+   ```bash
+   curl -fsSL https://tailscale.com/install.sh | sh
+   ```
+   (voir https://tailscale.com/download pour macOS/Windows)
 2. Connecte-toi au tailnet de l'equipe (demande l'invitation a l'admin)
-3. Active l'acceptation des routes : `tailscale up --accept-routes`
+3. Active l'acceptation des routes : `sudo tailscale up --accept-routes`
 4. Le reseau 10.10.0.0/24 est directement accessible, pas besoin de tunnel
+5. **Etape obligatoire cote admin** : approuver la route annoncee par `pve1`
+   sur https://login.tailscale.com → Machines → `pve1` → Edit route settings.
+   Sans cette approbation manuelle, la route reste inactive meme apres
+   `--accept-routes` et les commandes `kubectl`/`talosctl` timeout silencieusement.
 
 #### WSL2 sans systemd — demarrer Tailscale manuellement
 
@@ -502,6 +510,116 @@ L'image officielle postgres demarre en root pour initialiser les volumes
 
 Les images backend/frontend utilisent `USER app` (UID 1000), donc les deployments
 specifient `runAsUser: 1000` et `runAsGroup: 1000` pour satisfaire `runAsNonRoot: true`.
+
+---
+
+## 9. Procedure — Compromission d'un poste (rotation des acces)
+
+> A suivre des qu'un poste ayant acces au cluster (kubeconfig, cle SSH Proxmox,
+> Tailscale) est suspecte d'etre compromis (piratage, vol, malware).
+
+Tout secret qui a pu transiter par le poste compromis est considere comme
+**fuite**, meme sans preuve formelle d'exfiltration. On revoque et on
+regenere plutot que de verifier au cas par cas.
+
+### 9.1 Couper l'acces reseau du poste compromis
+
+- Retirer le device de la console Tailscale : https://login.tailscale.com
+  → Machines → selectionner le poste → **Delete** (ou **Disable**).
+- Tuer une eventuelle session SSH active vers le Proxmox :
+  ```bash
+  # Sur le Proxmox, en root
+  who              # repere la session
+  pkill -KILL -u <user_du_poste_compromis>
+  ```
+
+### 9.2 Revoquer la cle SSH utilisee sur le Proxmox
+
+```bash
+# Sur le Proxmox, en root
+nano /home/<prenom>/.ssh/authorized_keys   # retirer la ligne concernee
+```
+
+Regenerer une nouvelle paire de cles sur un poste sain, puis reappliquer
+la procedure d'ajout du [§2](#2-configurer-lacces-ssh-au-proxmox).
+
+### 9.3 Rotation du kubeconfig / acces cluster
+
+Le kubeconfig admin est lie au certificat CA Kubernetes genere par Talos.
+Il n'y a pas de "mot de passe" a changer — il faut regenerer le certificat
+client.
+
+```bash
+# Depuis un poste sain, talosctl configure avec acces au cluster
+talosctl kubeconfig --nodes 10.10.0.125 --force ~/.kube/kubeconfig_cryptobot_new.yaml
+```
+
+- Distribuer le **nouveau** fichier uniquement aux postes sains.
+- Detruire toute copie du kubeconfig sur le poste compromis (s'il est encore accessible).
+- Le certificat admin partage reste valide jusqu'a expiration meme apres
+  remplacement du fichier local : envisager a terme des certificats/`ServiceAccount`
+  nominatifs par membre pour permettre une revocation individuelle.
+
+### 9.4 Rotation des secrets applicatifs (Sealed Secrets)
+
+Tout secret visible via `kbot get secret ... -o jsonpath` depuis le poste
+compromis doit etre change : `POSTGRES_PWD`, `MINIO_ACCESS_KEY`,
+`MINIO_SECRET_KEY`, `SECRET_KEY`, `BINANCE_ENC_KEY`.
+
+Utiliser le script dedie, qui enchaine toutes les etapes necessaires
+(generation des valeurs, `ALTER USER` PostgreSQL en direct, scellement
+`kubeseal`, application au cluster, redemarrage de `minio` et du backend) :
+
+```bash
+./scripts/rotate_secrets.sh staging
+./scripts/rotate_secrets.sh production
+```
+
+A repeter pour les deux environnements si le poste compromis avait acces
+aux deux. Verifier ensuite les logs du backend (connexion DB active) et de
+`minio-0` avant de commiter le(s) fichier(s) `overlays/<env>/secrets.yaml`.
+
+> **BINANCE_ENC_KEY** chiffre les cles API Binance stockees en base
+> (`user_settings.api_keys`). Le script ne fait *pas* de re-chiffrement des
+> donnees existantes : verifier au prealable qu'aucune cle n'est stockee
+> (`SELECT ... FROM user_settings WHERE api_keys IS NOT NULL`) avant de
+> lancer la rotation, sinon les cles deviendraient illisibles. Si des cles
+> sont un jour stockees, une migration de re-chiffrement devra etre ecrite
+> avant de pouvoir roter cette valeur sans perte de donnees.
+
+Pour modifier un secret ponctuellement (hors contexte d'incident), voir la
+procedure manuelle au [§6](#6-modifier-un-secret-kubeseal).
+
+### 9.5 Mot de passe ArgoCD / Grafana
+
+```bash
+kbot -n argocd exec -it deployment/argocd-server -- argocd account update-password
+# Grafana : changer via l'UI (namespace monitoring)
+```
+
+### 9.6 Verifier l'historique Git
+
+Verifier qu'aucun secret en clair n'a ete commite par erreur avant chiffrement
+kubeseal :
+```bash
+git log -p -- overlays/ | grep -i "BEGIN\|PWD\|SECRET"
+```
+
+### 9.7 Reconfigurer le nouveau poste
+
+Une fois les acces regeneres, reprendre depuis le [§1](#1-installer-kubectl)
+de ce document sur le poste sain.
+
+### Resume rotation
+
+| Acces | Action |
+|-------|--------|
+| Tailscale | Supprimer/desactiver le device compromis dans la console |
+| SSH Proxmox | Retirer la cle de `authorized_keys`, en generer une nouvelle |
+| kubeconfig | Regenerer via `talosctl kubeconfig --force`, distribuer aux postes sains uniquement |
+| Secrets app (DB, API, MinIO, SECRET_KEY) | Regenerer les valeurs, re-sceller avec `kubeseal`, commiter |
+| ArgoCD / Grafana | Changer les mots de passe |
+| Historique Git | Verifier l'absence de secret en clair commite |
 
 ---
 

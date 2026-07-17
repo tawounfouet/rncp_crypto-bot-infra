@@ -1160,7 +1160,7 @@ spec:
   source:
     repoURL: https://gitlab.com/dst_crypto/crypto-bot-infra.git
     targetRevision: main
-    path: overlays/prod
+    path: overlays/production
   destination:
     server: https://kubernetes.default.svc
     namespace: production

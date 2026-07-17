@@ -2,7 +2,7 @@
 # =============================================================================
 # verify.sh — Validation des manifests Kustomize (statique, sans cluster)
 #
-# Pour chaque overlay (dev/staging/prod) :
+# Pour chaque overlay (dev/staging/production) :
 #   1. le build Kustomize aboutit ;
 #   2. les ressources rendues sont valides au regard des schémas Kubernetes
 #      (kubeconform ; les CRD sans schéma public, ex. SealedSecret, sont skip).
@@ -29,7 +29,7 @@ FAIL=0
 ok() { printf "  \033[32m✓\033[0m %s\n" "$1"; }
 ko() { printf "  \033[31m✗\033[0m %s\n" "$1"; FAIL=1; }
 
-OVERLAYS="${*:-dev staging prod}"
+OVERLAYS="${*:-dev staging production}"
 
 for env in $OVERLAYS; do
   echo

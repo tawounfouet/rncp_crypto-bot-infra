@@ -116,7 +116,7 @@ argocd/
 **Etapes :**
 
 - **A** : Cle SSH K8s → AWS (SealedSecret)
-- **B** : CronJob manifest (`overlays/prod/backup-cronjob.yaml`)
+- **B** : CronJob manifest (`overlays/production/backup-cronjob.yaml`)
 - **C** : Kustomization prod update
 - **D** : Scripts fallback/restore sur AWS (`fallback.sh`, `restore-normal.sh`, `test-restore.sh`)
 - **E** : Deploiement et test end-to-end
