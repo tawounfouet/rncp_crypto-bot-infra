@@ -1,0 +1,6 @@
+---
+- name: Verifier la sante fonctionnelle de l'environnement crypto-bot
+  hosts: all
+  gather_facts: true
+  roles:
+    - verify

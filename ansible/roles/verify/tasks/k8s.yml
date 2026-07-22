@@ -1,0 +1,19 @@
+---
+- name: "Sante K8s ({{ item.kind }}/{{ item.name }})"
+  kubernetes.core.k8s_info:
+    kind: "{{ item.kind }}"
+    name: "{{ item.name }}"
+    namespace: "{{ namespace }}"
+    context: "{{ kube_context }}"
+  register: _k8s_result
+  loop: "{{ k8s_services }}"
+  loop_control:
+    label: "{{ item.kind }}/{{ item.name }}"
+
+- name: "Assert readyReplicas >= 1 ({{ item.item.kind }}/{{ item.item.name }})"
+  ansible.builtin.assert:
+    that: item.resources[0].status.readyReplicas | default(0) >= 1
+    fail_msg: "{{ item.item.kind }}/{{ item.item.name }}: aucune replica ready"
+  loop: "{{ _k8s_result.results }}"
+  loop_control:
+    label: "{{ item.item.kind }}/{{ item.item.name }}"

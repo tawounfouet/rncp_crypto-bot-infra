@@ -1,0 +1,14 @@
+---
+- name: Verifier la sante via docker compose (dev/staging/production)
+  include_tasks: docker_compose.yml
+  when: verify_target == "docker_compose"
+
+- name: Smoke test fonctionnel Airflow (docker compose uniquement)
+  include_tasks: smoke_dag.yml
+  when:
+    - verify_target == "docker_compose"
+    - smoke_dag | length > 0
+
+- name: Verifier la sante via Kubernetes
+  include_tasks: k8s.yml
+  when: verify_target == "k8s"

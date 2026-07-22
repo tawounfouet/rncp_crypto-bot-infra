@@ -1,0 +1,7 @@
+---
+services: []
+smoke_dag: {}
+http_retries: 5
+http_delay: 3
+dag_run_retries: 30
+dag_run_delay: 10

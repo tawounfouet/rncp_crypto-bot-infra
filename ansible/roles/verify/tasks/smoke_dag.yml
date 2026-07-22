@@ -1,0 +1,32 @@
+---
+- name: "Unpause du DAG {{ smoke_dag.dag_id }}"
+  ansible.builtin.command:
+    cmd: "docker exec {{ smoke_dag.scheduler_container }} airflow dags unpause {{ smoke_dag.dag_id }}"
+  changed_when: true
+
+- name: "Declenchement d'un run smoke pour {{ smoke_dag.dag_id }}"
+  ansible.builtin.command:
+    cmd: "docker exec {{ smoke_dag.scheduler_container }} airflow dags trigger {{ smoke_dag.dag_id }} -r smoke-{{ ansible_date_time.epoch }}"
+  register: _dag_trigger
+  changed_when: true
+
+- name: "Attente du resultat du run smoke ({{ smoke_dag.dag_id }})"
+  ansible.builtin.command:
+    cmd: >-
+      docker exec {{ smoke_dag.postgres_container }} psql -U {{ smoke_dag.postgres_user }} -d airflow
+      -tAc "SELECT state FROM dag_run WHERE dag_id='{{ smoke_dag.dag_id }}' AND run_id='smoke-{{ ansible_date_time.epoch }}'"
+  register: _dag_state
+  changed_when: false
+  retries: "{{ dag_run_retries }}"
+  delay: "{{ dag_run_delay }}"
+  until: (_dag_state.stdout | trim) in ['success', 'failed']
+  failed_when: (_dag_state.stdout | trim) == 'failed'
+
+- name: "Assert artefact produit ({{ smoke_dag.assert_sql }})"
+  ansible.builtin.command:
+    cmd: >-
+      docker exec {{ smoke_dag.postgres_container }} psql -U {{ smoke_dag.postgres_user }} -d {{ smoke_dag.postgres_db }}
+      -tAc "{{ smoke_dag.assert_sql }}"
+  register: _artefact_count
+  changed_when: false
+  failed_when: (_artefact_count.stdout | trim | int) <= 0

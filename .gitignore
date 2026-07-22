@@ -8,3 +8,6 @@ diagrams/export.py
 # Local-only files (secrets, notes)
 docs/.local-secrets.md
 docs/TODO.md
+
+# Vault ansible (host/user/chemin cle SSH VM) -- reste local, meme chiffre
+ansible/group_vars/vm_liora.yml

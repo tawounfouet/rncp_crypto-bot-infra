@@ -1,0 +1,6 @@
+---
+- name: "Verifier chaque service ({{ item.name }})"
+  include_tasks: check_service.yml
+  loop: "{{ services }}"
+  loop_control:
+    label: "{{ item.name }}"

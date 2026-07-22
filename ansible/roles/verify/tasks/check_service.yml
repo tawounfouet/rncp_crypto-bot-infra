@@ -1,0 +1,40 @@
+---
+- name: "HTTP check ({{ item.name }})"
+  ansible.builtin.uri:
+    url: "{{ item.health.url }}"
+    status_code: 200
+    return_content: true
+  register: _http_result
+  retries: "{{ http_retries }}"
+  delay: "{{ http_delay }}"
+  until: _http_result.status == 200
+  changed_when: false
+  when: item.health.type == "http"
+
+- name: "HTTP check ({{ item.name }}) - contenu attendu"
+  ansible.builtin.assert:
+    that: item.health.expect in (_http_result.content | default(''))
+    fail_msg: "{{ item.name }}: reponse HTTP recue mais ne contient pas '{{ item.health.expect }}'"
+  when:
+    - item.health.type == "http"
+    - item.health.expect is defined
+
+- name: "Presence check ({{ item.name }})"
+  community.docker.docker_container_info:
+    name: "{{ item.container }}"
+  register: _presence_result
+  when: item.health.type == "presence"
+
+- name: "Presence check ({{ item.name }}) - conteneur running"
+  ansible.builtin.assert:
+    that: _presence_result.container.State.Running
+    fail_msg: "{{ item.name }} ({{ item.container }}) n'est pas Running"
+  when: item.health.type == "presence"
+
+- name: "pg_isready check ({{ item.name }})"
+  ansible.builtin.command:
+    cmd: "docker exec {{ item.container }} pg_isready -U {{ item.health.user }}"
+  register: _pg_result
+  changed_when: false
+  failed_when: _pg_result.rc != 0
+  when: item.health.type == "pg_isready"

@@ -1,0 +1,41 @@
+---
+verify_target: docker_compose
+postgres_user: postgres
+postgres_db: crypto_bot_db
+
+services:
+  - name: backend
+    container: crypto-bot-backend
+    health: { type: http, url: "http://localhost:8009/health" }
+  - name: frontend
+    container: crypto-bot-frontend
+    health: { type: http, url: "http://localhost:8501/_stcore/health" }
+  - name: ml_api
+    container: crypto-bot-ml-api
+    health: { type: http, url: "http://localhost:8010/health" }
+  - name: mlflow
+    container: mlflow-ui
+    health: { type: http, url: "http://localhost:5001/health" }
+  - name: minio
+    container: minio-s3-service
+    health: { type: http, url: "http://localhost:9000/minio/health/live" }
+  - name: minio_console
+    container: minio-s3-service
+    health: { type: http, url: "http://localhost:9001" }
+  - name: postgres
+    container: postgres-db
+    health: { type: pg_isready, user: "{{ postgres_user }}" }
+  - name: airflow_webserver
+    container: airflow-webserver
+    health: { type: http, url: "http://localhost:8080/health", expect: '"status": "healthy"' }
+  - name: airflow_scheduler
+    container: airflow-scheduler
+    health: { type: presence }
+
+smoke_dag:
+  scheduler_container: airflow-scheduler
+  postgres_container: postgres-db
+  postgres_user: "{{ postgres_user }}"
+  postgres_db: "{{ postgres_db }}"
+  dag_id: ingest_ohlcv_binance_to_minio
+  assert_sql: "SELECT count(*) FROM market_data WHERE exchange='binance'"

@@ -1,0 +1,7 @@
+---
+verify_target: k8s
+kube_context: admin@crypto-bot
+namespace: dev
+k8s_services:
+  - { kind: Deployment, name: crypto-bot-backend }
+  - { kind: Deployment, name: crypto-bot-frontend }
