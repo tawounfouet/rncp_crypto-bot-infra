@@ -6,11 +6,15 @@
 # Usage: ./port-forward.sh [dev|staging|production|infra|all]
 #
 # Ports locaux :
-#   dev        → 8009/8501/5432/9000/9001
+#   dev        → 8019/8511/5442/9020/9021
 #   staging    → 8109/8601/5532/9100/9101
 #   production → 8209/8701/5632/9200/9201
 #   infra      → 8443 (ArgoCD) / 3000 (Grafana)
 #   all        → staging + infra
+#
+# Le pool dev est volontairement distinct de docker-compose.yml (dev local :
+# 8009/8501/5434/9000/9001) : les deux peuvent tourner en parallele sur le
+# meme poste sans se percuter.
 #
 set -euo pipefail
 
@@ -56,9 +60,9 @@ forward_apps() {
   # Ports par environnement (local:remote)
   case "$ns" in
     dev)
-      P_BACKEND=8009;  P_FRONTEND=8501
-      P_PG=5432
-      P_MINIO=9000;    P_MINIOC=9001
+      P_BACKEND=8019;  P_FRONTEND=8511
+      P_PG=5442
+      P_MINIO=9020;    P_MINIOC=9021
       ;;
     staging)
       P_BACKEND=8109;  P_FRONTEND=8601

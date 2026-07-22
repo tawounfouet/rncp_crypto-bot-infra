@@ -24,7 +24,7 @@ flowchart TB
         direction TB
         app["Crypto-bot-app<br/>(code + pipeline)"]
         infra["crypto-bot-infra<br/>(manifests K8s, aucune CI)"]
-        registry["Container Registry<br/>(images backend/frontend/ml-api)"]
+        registry["Container Registry<br/>(images backend/frontend/ml-api/airflow)"]
     end
 
     subgraph CI["Jobs CI (runners GitLab, ephemeres)"]
@@ -39,11 +39,11 @@ flowchart TB
     subgraph K8S["Cluster K8s Proxmox (Talos) — deploiement principal"]
         direction TB
         argocd["ArgoCD<br/>(Deploy Token argocd-read,<br/>read_repository)"]
-        pods["Pods backend/frontend/ml-api<br/>(ImagePullSecret par namespace,<br/>PAT read_registry)"]
+        pods["Pods backend/frontend uniquement<br/>(ImagePullSecret par namespace,<br/>PAT read_registry)"]
         sealed["SealedSecrets<br/>overlays/{dev,staging,production}/secrets.yaml<br/>(chiffres avec la cle publique du cluster)"]
     end
 
-    subgraph VM["VM AWS (ecole DataScientest) — fallback docker-compose"]
+    subgraph VM["VM AWS (ecole Liora) — fallback docker-compose"]
         direction TB
         vmapp["docker compose up<br/>(pull via VM_REGISTRY_USER/PASSWORD)"]
     end
@@ -72,6 +72,15 @@ jamais directement sur le cluster. Elle met à jour un tag d'image + une annotat
 `crypto-bot-infra` (`update:manifests`), et c'est **ArgoCD** (qui tourne dans le cluster)
 qui détecte le changement et synchronise. La VM AWS est un chemin de secours parallèle
 (`deploy:staging`/`deploy:production`), indépendant d'ArgoCD.
+
+**Asymétrie volontaire (2026-07-22)** : le cluster K8s ne fait tourner que `backend`/
+`frontend` (`base/` ne contient que ces deux manifests). `ml-api`/`mlflow-ui` (ajoutés
+le 2026-07-21) et `airflow` (ajouté le 2026-07-22) n'existent que côté VM AWS
+(`docker-compose.staging.yml`/`docker-compose.prod.yml` dans `crypto-bot-app`) — aucun
+manifest K8s équivalent n'a été créé pour eux. Ce n'est pas un oubli de cette session,
+mais un choix de scope pas encore comblé : si ces services doivent un jour tourner sur
+K8s aussi, il faudra ajouter `base/ml-api/`, `base/mlflow-ui/`, `base/airflow/` (+
+overlays) dans ce repo, à l'identique du pattern existant pour `backend`/`frontend`.
 
 ---
 
@@ -219,4 +228,4 @@ comportement exact du controller installé.
   cluster ont dérivé l'un de l'autre. À resynchroniser (régénération complète via §4.2)
   plutôt que de corriger un champ isolément.
 - **Rotation de `SSH_PRIVATE_KEY`** : en attente — la VM cible est une ressource de l'école
-  DataScientest, à vérifier auprès de l'encadrant avant toute rotation autonome.
+  Liora, à vérifier auprès de l'encadrant avant toute rotation autonome.

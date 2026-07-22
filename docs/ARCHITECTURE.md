@@ -10,7 +10,7 @@
   production tournent en namespaces separes, deployees via GitOps ArgoCD
   (voir §5)
 - CI/CD : GitLab CI (lint > test > build > update:manifests → ArgoCD sync)
-- VM AWS DataScientest : reverse proxy + backups off-site + fallback
+- VM AWS Liora : reverse proxy + backups off-site + fallback
   docker-compose (bascule uniquement si le Proxmox tombe, voir §5)
 - Registry : GitLab Container Registry (`registry.gitlab.com/dst_crypto/crypto-bot-app`)
 
@@ -25,7 +25,7 @@
 | Ressource | Specs | Role |
 |-----------|-------|------|
 | **Serveur Proxmox (P1)** | 64 GB RAM, 512 GB SSD | Cluster K8s complet |
-| VM AWS DataScientest | 2 vCPU, 7.6 GB RAM, 29 GB | Reverse proxy + fallback |
+| VM AWS Liora | 2 vCPU, 7.6 GB RAM, 29 GB | Reverse proxy + fallback |
 | Dell Inspiron 5515 | 16 GB RAM | Dev local |
 
 ### Contraintes

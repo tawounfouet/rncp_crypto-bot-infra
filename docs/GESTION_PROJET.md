@@ -8,7 +8,7 @@
 ## 1. Contexte
 
 - **Projet** : Crypto-Bot — Bot de trading automatise pour Binance
-- **Formation** : Alternance Data Engineer, DataScientest / OMNES Education (sept. 2024)
+- **Formation** : Alternance Data Engineer, Liora / OMNES Education (sept. 2024)
 - **Soutenance** : 1er septembre 2026
 - **Cahier des charges** : `Cahier_des_charges_Crypto_Bot_V0.1.pdf` (dec. 2024)
 
@@ -55,7 +55,7 @@
 |---------|-------------|
 | **S** — Specifique | Application web (Streamlit + FastAPI) connectee a l'API Binance, permettant de visualiser un portefeuille, configurer et executer des bots de trading |
 | **M** — Mesurable | 6 pages fonctionnelles (Portefeuille, Controle Bot, Performances, Parametrage, Admin, Monitoring), 50+ endpoints API, 2 strategies minimum (DCA, Grid Trading) |
-| **A** — Acceptable | Valide par l'equipe et le jury DataScientest, conforme au cahier des charges V0.1 |
+| **A** — Acceptable | Valide par l'equipe et le jury Liora, conforme au cahier des charges V0.1 |
 | **R** — Realiste | Equipe de 4 personnes, stack Python maitrisee, API Binance documentee, infra K8s operationnelle |
 | **T** — Temporel | MVP fonctionnel avant juillet 2026, soutenance 1er septembre 2026 |
 
