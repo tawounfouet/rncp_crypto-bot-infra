@@ -6,12 +6,12 @@ set -euo pipefail
 # Modes :
 #   staging | production  -> secrets applicatifs (crypto-bot-secrets) :
 #     POSTGRES_PWD, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, SECRET_KEY,
-#     BINANCE_ENC_KEY. Applique le nouveau mot de passe directement dans
+#     EXCHANGE_ENC_KEY. Applique le nouveau mot de passe directement dans
 #     PostgreSQL, re-scelle le secret avec kubeseal, l'applique au cluster
 #     puis redemarre minio et le backend.
 #
-#     BINANCE_ENC_KEY chiffre les cles API Binance stockees en base
-#     (user_settings.api_keys). Ce mode ne doit etre lance QUE si aucune cle
+#     EXCHANGE_ENC_KEY chiffre les cles API exchange (Binance, Kraken, ...)
+#     stockees en base (user_settings.api_keys). Ce mode ne doit etre lance QUE si aucune cle
 #     n'est actuellement stockee (verifie au prealable), sinon elle
 #     deviendrait illisible. POSTGRES_USER n'est pas rote (identifiant, pas
 #     un secret).
@@ -50,7 +50,7 @@ gen_secret() {
   openssl rand -base64 64 | tr -dc 'A-Za-z0-9' | head -c "$length"
 }
 
-gen_binance_key() {
+gen_exchange_key() {
   # Cle AES 32 octets encodee en base64, format attendu par security.py
   openssl rand -base64 32
 }
@@ -73,12 +73,12 @@ rotate_app_secrets() {
   confirm
 
   echo "==> Generation des nouvelles valeurs"
-  local new_postgres_pwd new_minio_access_key new_minio_secret_key new_secret_key new_binance_enc_key
+  local new_postgres_pwd new_minio_access_key new_minio_secret_key new_secret_key new_exchange_enc_key
   new_postgres_pwd="$(gen_secret 32)"
   new_minio_access_key="$(gen_secret 20)"
   new_minio_secret_key="$(gen_secret 40)"
   new_secret_key="$(gen_secret 50)"
-  new_binance_enc_key="$(gen_binance_key)"
+  new_exchange_enc_key="$(gen_exchange_key)"
 
   echo "==> Lecture de l'utilisateur PostgreSQL actuel"
   local postgres_user
@@ -109,7 +109,7 @@ stringData:
   MINIO_ACCESS_KEY: "$new_minio_access_key"
   MINIO_SECRET_KEY: "$new_minio_secret_key"
   SECRET_KEY: "$new_secret_key"
-  BINANCE_ENC_KEY: "$new_binance_enc_key"
+  EXCHANGE_ENC_KEY: "$new_exchange_enc_key"
 EOF
 
   echo "==> Chiffrement avec kubeseal"
@@ -122,7 +122,7 @@ EOF
   kubectl rollout restart statefulset/minio -n "$namespace"
   kubectl rollout status statefulset/minio -n "$namespace" --timeout=120s
 
-  echo "==> Redemarrage du backend (prend POSTGRES_PWD / SECRET_KEY / BINANCE_ENC_KEY a jour)"
+  echo "==> Redemarrage du backend (prend POSTGRES_PWD / SECRET_KEY / EXCHANGE_ENC_KEY a jour)"
   kubectl rollout restart deployment/crypto-bot-backend -n "$namespace"
   kubectl rollout status deployment/crypto-bot-backend -n "$namespace" --timeout=120s
 

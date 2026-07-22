@@ -90,7 +90,7 @@
 <summary>Rotation des acces suite a compromission d'un poste (17/07/2026)</summary>
 
 - Revocation cle SSH Proxmox, regeneration kubeconfig/talosconfig
-- Rotation secrets applicatifs (staging + production) : `POSTGRES_PWD`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `SECRET_KEY`, `BINANCE_ENC_KEY`
+- Rotation secrets applicatifs (staging + production) : `POSTGRES_PWD`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `SECRET_KEY`, `EXCHANGE_ENC_KEY`
 - Script `scripts/rotate_secrets.sh` cree (modes staging/production/argocd/grafana, verification post-rotation automatisee)
 - Rotation mots de passe ArgoCD + Grafana
 - Renommage `overlays/prod` → `overlays/production` (coherence avec le namespace k8s)

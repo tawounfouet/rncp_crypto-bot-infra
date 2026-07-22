@@ -588,7 +588,7 @@ talosctl kubeconfig --nodes 10.10.0.125 --force ~/.kube/kubeconfig_cryptobot_new
 
 Tout secret visible via `kbot get secret ... -o jsonpath` depuis le poste
 compromis doit etre change : `POSTGRES_PWD`, `MINIO_ACCESS_KEY`,
-`MINIO_SECRET_KEY`, `SECRET_KEY`, `BINANCE_ENC_KEY`.
+`MINIO_SECRET_KEY`, `SECRET_KEY`, `EXCHANGE_ENC_KEY`.
 
 Utiliser le script dedie, qui enchaine toutes les etapes necessaires
 (generation des valeurs, `ALTER USER` PostgreSQL en direct, scellement
@@ -603,7 +603,7 @@ A repeter pour les deux environnements si le poste compromis avait acces
 aux deux. Verifier ensuite les logs du backend (connexion DB active) et de
 `minio-0` avant de commiter le(s) fichier(s) `overlays/<env>/secrets.yaml`.
 
-> **BINANCE_ENC_KEY** chiffre les cles API Binance stockees en base
+> **EXCHANGE_ENC_KEY** chiffre les cles API exchange (Binance, Kraken, ...) stockees en base
 > (`user_settings.api_keys`). Le script ne fait *pas* de re-chiffrement des
 > donnees existantes : verifier au prealable qu'aucune cle n'est stockee
 > (`SELECT ... FROM user_settings WHERE api_keys IS NOT NULL`) avant de

@@ -25,6 +25,7 @@ docs/                   Documentation
 | [INSTALL.md](docs/INSTALL.md) | Admin infra | Reconstruction du cluster depuis zero |
 | [ROADMAP.md](docs/ROADMAP.md) | Jury / suivi | Historique des phases livrees, mapping referentiel |
 | [GESTION_PROJET.md](docs/GESTION_PROJET.md) | Jury | RACI, objectifs SMART, methodologie, budget |
+| [SECRETS_ET_TOKENS.md](docs/SECRETS_ET_TOKENS.md) | Admin infra | Cartographie complete PC/GitLab/K8s/VM, tokens, scellement EXCHANGE_ENC_KEY |
 
 ## Liens rapides
 
