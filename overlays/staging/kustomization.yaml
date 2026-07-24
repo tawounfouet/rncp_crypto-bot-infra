@@ -30,7 +30,7 @@ patches:
       - op: add
         path: /spec/template/metadata/annotations
         value:
-          deployed-commit: "1454dba4"
+          deployed-commit: "2095ebeb"
 
   - target:
       kind: Deployment
@@ -52,4 +52,4 @@ patches:
       - op: add
         path: /spec/template/metadata/annotations
         value:
-          deployed-commit: "1454dba4"
+          deployed-commit: "2095ebeb"
