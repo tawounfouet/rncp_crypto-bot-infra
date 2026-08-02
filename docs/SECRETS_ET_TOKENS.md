@@ -39,7 +39,7 @@ flowchart TB
     subgraph K8S["Cluster K8s Proxmox (Talos) — deploiement principal"]
         direction TB
         argocd["ArgoCD<br/>(Deploy Token argocd-read,<br/>read_repository)"]
-        pods["Pods backend/frontend uniquement<br/>(ImagePullSecret par namespace,<br/>PAT read_registry)"]
+        pods["Pods backend/frontend/postgres/minio<br/>(ImagePullSecret par namespace,<br/>PAT read_registry)"]
         sealed["SealedSecrets<br/>overlays/{dev,staging,production}/secrets.yaml<br/>(chiffres avec la cle publique du cluster)"]
     end
 
@@ -73,14 +73,15 @@ jamais directement sur le cluster. Elle met à jour un tag d'image + une annotat
 qui détecte le changement et synchronise. La VM AWS est un chemin de secours parallèle
 (`deploy:staging`/`deploy:production`), indépendant d'ArgoCD.
 
-**Asymétrie volontaire (2026-07-22)** : le cluster K8s ne fait tourner que `backend`/
-`frontend` (`base/` ne contient que ces deux manifests). `ml-api`/`mlflow-ui` (ajoutés
-le 2026-07-21) et `airflow` (ajouté le 2026-07-22) n'existent que côté VM AWS
-(`docker-compose.staging.yml`/`docker-compose.prod.yml` dans `crypto-bot-app`) — aucun
-manifest K8s équivalent n'a été créé pour eux. Ce n'est pas un oubli de cette session,
-mais un choix de scope pas encore comblé : si ces services doivent un jour tourner sur
-K8s aussi, il faudra ajouter `base/ml-api/`, `base/mlflow-ui/`, `base/airflow/` (+
-overlays) dans ce repo, à l'identique du pattern existant pour `backend`/`frontend`.
+**Asymétrie volontaire (2026-07-22, corrigée 2026-07-23)** : le cluster K8s fait tourner
+`backend`/`frontend`/`postgres`/`minio` (`base/kustomization.yaml` liste ces 4 ressources).
+`ml-api`/`mlflow-ui` (ajoutés le 2026-07-21) et `airflow` (ajouté le 2026-07-22) n'existent
+que côté VM AWS (`docker-compose.staging.yml`/`docker-compose.prod.yml` dans
+`crypto-bot-app`) — aucun manifest K8s équivalent n'a été créé pour eux. Ce n'est pas un
+oubli de cette session, mais un choix de scope pas encore comblé : si ces services doivent
+un jour tourner sur K8s aussi, il faudra ajouter `base/ml-api/`, `base/mlflow-ui/`,
+`base/airflow/` (+ overlays) dans ce repo, à l'identique du pattern existant pour
+`backend`/`frontend`/`postgres`/`minio`.
 
 ---
 

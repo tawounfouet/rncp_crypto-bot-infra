@@ -675,6 +675,48 @@ helm install gitlab-runner gitlab/gitlab-runner \
 
 ---
 
+## Phase 9 : Maintenance — nettoyage Docker automatique (tout hote)
+
+**A faire sur chaque hote qui execute des `docker build`/`docker compose up`
+regulierement** : le runner GitLab (Phase 8), les VMs AWS staging/production
+(docker-compose), tout hote Proxmox qui buildrait des images en local. Sans ca, les
+images/layers/build-cache s'accumulent en silence jusqu'a `no space left on device` —
+deja rencontre deux fois (runner GitLab le 2026-07-21, VM staging le 2026-07-23, dans les
+deux cas suite a une accumulation de mois de builds jamais nettoyes).
+
+```bash
+# 1. Script de nettoyage (necessite sudo si /usr/local/bin est root-owned)
+cat << 'EOF' | sudo tee /usr/local/bin/docker-prune-weekly.sh > /dev/null
+#!/bin/sh
+set -eu
+LOG=/var/log/docker-prune.log
+{
+  echo "=== $(date -Is) ==="
+  docker system prune -af --volumes
+  docker builder prune -af
+  echo '--- espace disque apres nettoyage ---'
+  df -h /
+} >> "$LOG" 2>&1
+EOF
+sudo chmod +x /usr/local/bin/docker-prune-weekly.sh
+
+# 2. Cron hebdomadaire (dimanche 3h — passer a quotidien si les builds
+#    s'accumulent plus vite que prevu)
+(crontab -l 2>/dev/null; echo '0 3 * * 0 /usr/local/bin/docker-prune-weekly.sh') | crontab -
+
+# 3. Verification
+crontab -l
+cat /usr/local/bin/docker-prune-weekly.sh
+```
+
+Le log `/var/log/docker-prune.log` permet de confirmer apres coup que le cron tourne bien
+chaque semaine (`docker system prune -af --volumes` supprime aussi les conteneurs arretes
+et volumes orphelins — sans danger sur un hote CI/deploiement sans etat persistant en
+dehors des volumes nommes de l'application elle-meme, qui ne sont pas touches tant qu'un
+service les utilise).
+
+---
+
 ## Verification et checklists
 
 ### Checklist Phase 0-1 : Proxmox + Cluster Talos
