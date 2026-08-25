@@ -53,12 +53,22 @@ spec:
             httpGet:
               path: /health
               port: 8009
+              # kubelet appelle le pod par IP directe (pas de nom DNS) ; sans
+              # cet en-tete, TrustedHostMiddleware (ALLOWED_HOSTS) rejette la
+              # probe en 400 -> CrashLoopBackOff permanent. "crypto-bot-backend"
+              # est deja whitelist dans ALLOWED_HOSTS sur tous les environnements.
+              httpHeaders:
+                - name: Host
+                  value: crypto-bot-backend
             initialDelaySeconds: 40
             periodSeconds: 30
           readinessProbe:
             httpGet:
               path: /health
               port: 8009
+              httpHeaders:
+                - name: Host
+                  value: crypto-bot-backend
             initialDelaySeconds: 20
             periodSeconds: 10
           resources:
