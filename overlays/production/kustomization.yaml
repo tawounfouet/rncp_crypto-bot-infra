@@ -46,6 +46,11 @@ patches:
           name: ENVIRONMENT
           value: production
       - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: APP_VERSION
+          value: v1.0.2
+      - op: add
         path: /spec/template/metadata/annotations
         value:
           deployed-commit: "b8b5b2f5"
