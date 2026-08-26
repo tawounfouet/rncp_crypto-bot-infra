@@ -13,7 +13,7 @@ data:
       "tags": ["crypto-bot", "prometheus"],
       "title": "Crypto-Bot - Infra K8s (dev/staging/production)",
       "uid": "crypto-bot-infra",
-      "version": 2,
+      "version": 3,
       "time": { "from": "now-6h", "to": "now" },
       "timezone": "browser",
       "refresh": "30s",
@@ -23,6 +23,7 @@ data:
           "type": "table",
           "title": "Dev (K8s)",
           "gridPos": { "h": 6, "w": 5, "x": 0, "y": 0 },
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
           "targets": [
             {
               "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
@@ -47,6 +48,7 @@ data:
           "type": "table",
           "title": "Staging (K8s)",
           "gridPos": { "h": 6, "w": 5, "x": 5, "y": 0 },
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
           "targets": [
             {
               "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
@@ -71,6 +73,7 @@ data:
           "type": "table",
           "title": "Production (K8s)",
           "gridPos": { "h": 6, "w": 5, "x": 10, "y": 0 },
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
           "targets": [
             {
               "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
@@ -95,6 +98,7 @@ data:
           "type": "table",
           "title": "Staging (VM AWS)",
           "gridPos": { "h": 6, "w": 5, "x": 15, "y": 0 },
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
           "targets": [
             {
               "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
@@ -119,6 +123,7 @@ data:
           "type": "table",
           "title": "Production (VM AWS)",
           "gridPos": { "h": 6, "w": 4, "x": 20, "y": 0 },
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
           "targets": [
             {
               "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
