@@ -13,16 +13,126 @@ data:
       "tags": ["crypto-bot", "prometheus"],
       "title": "Crypto-Bot - Infra K8s (dev/staging/production)",
       "uid": "crypto-bot-infra",
-      "version": 1,
+      "version": 2,
       "time": { "from": "now-6h", "to": "now" },
       "timezone": "browser",
       "refresh": "30s",
       "panels": [
         {
+          "id": 10,
+          "type": "table",
+          "title": "Dev (K8s)",
+          "gridPos": { "h": 6, "w": 5, "x": 0, "y": 0 },
+          "targets": [
+            {
+              "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
+              "type": "json",
+              "source": "url",
+              "format": "table",
+              "url": "http://crypto-bot-backend.dev.svc.cluster.local:8009/health",
+              "url_options": { "method": "GET" },
+              "root_selector": "",
+              "columns": [
+                { "selector": "status", "text": "Statut", "type": "string" },
+                { "selector": "version", "text": "Version", "type": "string" }
+              ],
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 11,
+          "type": "table",
+          "title": "Staging (K8s)",
+          "gridPos": { "h": 6, "w": 5, "x": 5, "y": 0 },
+          "targets": [
+            {
+              "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
+              "type": "json",
+              "source": "url",
+              "format": "table",
+              "url": "http://crypto-bot-backend.staging.svc.cluster.local:8009/health",
+              "url_options": { "method": "GET" },
+              "root_selector": "",
+              "columns": [
+                { "selector": "status", "text": "Statut", "type": "string" },
+                { "selector": "version", "text": "Version", "type": "string" }
+              ],
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 12,
+          "type": "table",
+          "title": "Production (K8s)",
+          "gridPos": { "h": 6, "w": 5, "x": 10, "y": 0 },
+          "targets": [
+            {
+              "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
+              "type": "json",
+              "source": "url",
+              "format": "table",
+              "url": "http://crypto-bot-backend.production.svc.cluster.local:8009/health",
+              "url_options": { "method": "GET" },
+              "root_selector": "",
+              "columns": [
+                { "selector": "status", "text": "Statut", "type": "string" },
+                { "selector": "version", "text": "Version", "type": "string" }
+              ],
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 13,
+          "type": "table",
+          "title": "Staging (VM AWS)",
+          "gridPos": { "h": 6, "w": 5, "x": 15, "y": 0 },
+          "targets": [
+            {
+              "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
+              "type": "json",
+              "source": "url",
+              "format": "table",
+              "url": "http://100.100.226.42:8009/health",
+              "url_options": { "method": "GET" },
+              "root_selector": "",
+              "columns": [
+                { "selector": "status", "text": "Statut", "type": "string" },
+                { "selector": "version", "text": "Version", "type": "string" }
+              ],
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 14,
+          "type": "table",
+          "title": "Production (VM AWS)",
+          "gridPos": { "h": 6, "w": 4, "x": 20, "y": 0 },
+          "targets": [
+            {
+              "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
+              "type": "json",
+              "source": "url",
+              "format": "table",
+              "url": "http://100.100.226.42:8010/health",
+              "url_options": { "method": "GET" },
+              "root_selector": "",
+              "columns": [
+                { "selector": "status", "text": "Statut", "type": "string" },
+                { "selector": "version", "text": "Version", "type": "string" }
+              ],
+              "refId": "A"
+            }
+          ]
+        },
+        {
           "id": 1,
           "type": "table",
           "title": "Etat des services (replicas disponibles / souhaitees)",
-          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 6 },
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "targets": [
             {
@@ -58,7 +168,7 @@ data:
           "id": 2,
           "type": "timeseries",
           "title": "CPU par pod (dev/staging/production)",
-          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 8 },
+          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 14 },
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
           "targets": [
@@ -72,7 +182,7 @@ data:
           "id": 3,
           "type": "timeseries",
           "title": "RAM par pod (dev/staging/production)",
-          "gridPos": { "h": 9, "w": 12, "x": 12, "y": 8 },
+          "gridPos": { "h": 9, "w": 12, "x": 12, "y": 14 },
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
           "targets": [
@@ -86,7 +196,7 @@ data:
           "id": 4,
           "type": "timeseries",
           "title": "CPU des 3 noeuds Talos",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 17 },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 23 },
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
           "targets": [
@@ -100,7 +210,7 @@ data:
           "id": 5,
           "type": "timeseries",
           "title": "RAM disponible des 3 noeuds Talos",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 17 },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 23 },
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
           "targets": [
