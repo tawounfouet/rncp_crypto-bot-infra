@@ -14,15 +14,12 @@ Un seul Grafana (namespace `monitoring`, deploye via ArgoCD) centralise l'etat d
 | `staging` (K8s) | Prometheus in-cluster + Promtail K8s (logs) | CPU/RAM/etat des pods + logs |
 | `production` (K8s) | Prometheus in-cluster + Promtail K8s (logs) | CPU/RAM/etat des pods + logs |
 | VM AWS Liora (staging/prod fallback) | Promtail sur la VM (logs, `{source="vm-aws"}`) | Logs staging/prod, distincts des logs K8s |
-| VM AWS Liora (metriques CPU/RAM/etat) | node_exporter + blackbox-exporter | **Prepares mais non fonctionnels**, voir limite ci-dessous |
+| VM AWS Liora (metriques CPU/RAM/etat) | node_exporter + blackbox-exporter, via `tailscale-proxy` | CPU/RAM de la VM, `/health` staging et prod independants |
 
-> **Limite connue** : `node_exporter`/`blackbox-exporter` sur la VM sont installes/configures
-> (cf. section dediee plus bas) mais **Prometheus in-cluster ne peut pas les scraper** :
-> les pods K8s n'ont pas d'interface Tailscale (contrairement aux logs, qui partent
-> de la VM *vers* le cluster via l'ingress — sens inverse, ca marche). Pas de fix
-> retenu avant la soutenance (options : pod sidecar Tailscale, operateur K8s officiel).
-> Etat de la VM verifiable manuellement : `tailscale ping vm-liora-crypto-bot`,
-> ou `curl http://100.x.x.x:9100/metrics` depuis un poste sur le tailnet.
+Les pods K8s n'ont pas d'interface Tailscale par eux-memes : Prometheus et
+blackbox-exporter atteignent la VM AWS via un pod dedie, `tailscale-proxy`
+(namespace `monitoring`), qui rejoint le tailnet en mode proxy SOCKS5/HTTP
+(`:1055`) — voir section dediee plus bas.
 
 Utilisateurs enregistres / etat DB : requetes directes sur les Postgres de chaque
 environnement (datasource Postgres native de Grafana, ou requete SQL manuelle —
@@ -183,8 +180,44 @@ Fix applique :
   vers une valeur deja whitelistee (`crypto-bot-backend`), plutot que d'ouvrir
   `ALLOWED_HOSTS` a `*`.
 - **VM AWS** : l'IP Tailscale de la VM (`100.100.226.42`) a ete ajoutee a
-  `ALLOWED_HOSTS`/`MLFLOW_SERVER_ALLOWED_HOSTS` dans `.env` sur la VM (a cote de
-  l'IP publique deja presente) — sinon blackbox recoit aussi un 400.
+  `ALLOWED_HOSTS`/`MLFLOW_SERVER_ALLOWED_HOSTS` dans **`.env.staging`** (pas `.env` !)
+  sur la VM, a cote de l'IP publique deja presente.
+
+> **Piege** : le job CI `deploy:staging` fait `cp .env.staging .env` a **chaque**
+> deploiement automatique (chaque push sur `staging`). Un edit fait uniquement sur
+> `.env` est donc ecrase au prochain deploiement — vecu en pratique : le fix
+> `ALLOWED_HOSTS` a ete perdu apres un merge qui a redeclenche `deploy:staging`.
+> Toujours editer `.env.staging` (le template persistant) pour qu'un changement
+> survive aux deploiements futurs.
+
+## Joindre la VM AWS depuis le cluster (pod `tailscale-proxy`)
+
+Les pods K8s n'ont pas d'interface Tailscale — sans ca, Prometheus et
+blackbox-exporter ne peuvent pas atteindre `100.100.226.42` malgre la route de
+subnet approuvee (qui ne beneficie qu'aux postes/laptops et a la VM elle-meme,
+de vrais membres du tailnet). `monitoring/tailscale-proxy.yaml` deploie un pod
+qui rejoint lui-meme le tailnet et expose un proxy SOCKS5/HTTP sur `:1055`,
+utilise via `proxy_url` :
+
+- **Prometheus** (`extraScrapeConfigs`, job `node_exporter`) : `proxy_url` au
+  niveau du job -- c'est Prometheus lui-meme qui doit sortir vers la VM.
+- **blackbox-exporter** (`config.modules.http_2xx.http.proxy_url`) : **pas**
+  dans le job Prometheus du job `blackbox` (celui-la n'appelle que
+  blackbox-exporter, deja joignable in-cluster) -- c'est blackbox-exporter
+  lui-meme qui fait l'appel HTTP reel vers la VM, donc le proxy se configure
+  dans son propre module, pas cote Prometheus.
+
+Config notable :
+- `TS_USERSPACE=true` : pas de TUN device / `NET_ADMIN` requis (conteneur non
+  privilegie, compatible PodSecurity Talos).
+- `TS_KUBE_SECRET=""` : **indispensable**. Sans ca, l'image `tailscale/tailscale`
+  detecte qu'elle tourne sur K8s et tente par defaut de stocker son etat dans un
+  Secret Kubernetes (`get`/`update` RBAC non accorde ici) plutot que d'utiliser
+  `TS_STATE_DIR` (volume `emptyDir`) -> `CrashLoopBackOff` au demarrage sans ce
+  flag.
+- Cle d'auth (`TS_AUTHKEY`) generee en mode Reusable + Ephemeral depuis
+  https://login.tailscale.com/admin/settings/keys, scellee comme les autres
+  secrets (kubeseal).
 
 ## Logs de la VM AWS (Promtail → Loki)
 
