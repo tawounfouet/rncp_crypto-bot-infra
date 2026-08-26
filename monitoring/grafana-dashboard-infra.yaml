@@ -13,107 +13,24 @@ data:
       "tags": ["crypto-bot", "prometheus"],
       "title": "Crypto-Bot - Infra K8s (dev/staging/production)",
       "uid": "crypto-bot-infra",
-      "version": 5,
+      "version": 6,
       "time": { "from": "now-6h", "to": "now" },
       "timezone": "browser",
       "refresh": "30s",
       "panels": [
         {
-          "id": 20,
-          "type": "row",
-          "title": "Kubernetes (Proxmox)",
-          "collapsed": false,
-          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
-          "panels": []
-        },
-        {
-          "id": 10,
-          "type": "table",
-          "title": "Dev (K8s)",
-          "gridPos": { "h": 6, "w": 8, "x": 0, "y": 1 },
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
-          "targets": [
-            {
-              "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
-              "type": "json",
-              "source": "url",
-              "format": "table",
-              "parser": "backend",
-              "url": "http://crypto-bot-backend.dev.svc.cluster.local:8009/health",
-              "url_options": { "method": "GET" },
-              "root_selector": "",
-              "json_options": { "root_is_not_array": true },
-              "columns": [
-                { "selector": "status", "text": "Statut", "type": "string" },
-                { "selector": "version", "text": "Version", "type": "string" }
-              ],
-              "refId": "A"
-            }
-          ]
-        },
-        {
-          "id": 11,
-          "type": "table",
-          "title": "Staging (K8s)",
-          "gridPos": { "h": 6, "w": 8, "x": 8, "y": 1 },
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
-          "targets": [
-            {
-              "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
-              "type": "json",
-              "source": "url",
-              "format": "table",
-              "parser": "backend",
-              "url": "http://crypto-bot-backend.staging.svc.cluster.local:8009/health",
-              "url_options": { "method": "GET" },
-              "root_selector": "",
-              "json_options": { "root_is_not_array": true },
-              "columns": [
-                { "selector": "status", "text": "Statut", "type": "string" },
-                { "selector": "version", "text": "Version", "type": "string" }
-              ],
-              "refId": "A"
-            }
-          ]
-        },
-        {
-          "id": 12,
-          "type": "table",
-          "title": "Production (K8s)",
-          "gridPos": { "h": 6, "w": 8, "x": 16, "y": 1 },
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
-          "targets": [
-            {
-              "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
-              "type": "json",
-              "source": "url",
-              "format": "table",
-              "parser": "backend",
-              "url": "http://crypto-bot-backend.production.svc.cluster.local:8009/health",
-              "url_options": { "method": "GET" },
-              "root_selector": "",
-              "json_options": { "root_is_not_array": true },
-              "columns": [
-                { "selector": "status", "text": "Statut", "type": "string" },
-                { "selector": "version", "text": "Version", "type": "string" }
-              ],
-              "refId": "A"
-            }
-          ]
-        },
-        {
           "id": 21,
           "type": "row",
           "title": "VM AWS (fallback)",
           "collapsed": false,
-          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 },
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
           "panels": []
         },
         {
           "id": 13,
           "type": "table",
           "title": "Staging (VM AWS)",
-          "gridPos": { "h": 6, "w": 12, "x": 0, "y": 8 },
+          "gridPos": { "h": 6, "w": 12, "x": 0, "y": 1 },
           "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
           "targets": [
             {
@@ -138,7 +55,7 @@ data:
           "id": 14,
           "type": "table",
           "title": "Production (VM AWS)",
-          "gridPos": { "h": 6, "w": 12, "x": 12, "y": 8 },
+          "gridPos": { "h": 6, "w": 12, "x": 12, "y": 1 },
           "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
           "targets": [
             {
@@ -163,7 +80,7 @@ data:
           "id": 15,
           "type": "timeseries",
           "title": "CPU VM AWS",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 7 },
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
           "targets": [
@@ -177,7 +94,7 @@ data:
           "id": 16,
           "type": "timeseries",
           "title": "RAM VM AWS",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 7 },
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
           "targets": [
@@ -188,6 +105,89 @@ data:
             {
               "expr": "node_memory_MemTotal_bytes{job=\"node_exporter\"}",
               "legendFormat": "total"
+            }
+          ]
+        },
+        {
+          "id": 20,
+          "type": "row",
+          "title": "Kubernetes (Proxmox)",
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 },
+          "panels": []
+        },
+        {
+          "id": 10,
+          "type": "table",
+          "title": "Dev (K8s)",
+          "gridPos": { "h": 6, "w": 8, "x": 0, "y": 16 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "targets": [
+            {
+              "expr": "max by (annotation_deployed_commit) (kube_pod_annotations{namespace=\"dev\", pod=~\"crypto-bot-backend.*\", annotation_deployed_commit=~\".+\"})",
+              "instant": true,
+              "format": "table",
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            { "id": "labelsToFields", "options": {} },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": { "Time": true, "Value": true },
+                "renameByName": { "annotation_deployed_commit": "Version deployee" }
+              }
+            }
+          ]
+        },
+        {
+          "id": 11,
+          "type": "table",
+          "title": "Staging (K8s)",
+          "gridPos": { "h": 6, "w": 8, "x": 8, "y": 16 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "targets": [
+            {
+              "expr": "max by (annotation_deployed_commit) (kube_pod_annotations{namespace=\"staging\", pod=~\"crypto-bot-backend.*\", annotation_deployed_commit=~\".+\"})",
+              "instant": true,
+              "format": "table",
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            { "id": "labelsToFields", "options": {} },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": { "Time": true, "Value": true },
+                "renameByName": { "annotation_deployed_commit": "Version deployee" }
+              }
+            }
+          ]
+        },
+        {
+          "id": 12,
+          "type": "table",
+          "title": "Production (K8s)",
+          "gridPos": { "h": 6, "w": 8, "x": 16, "y": 16 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "targets": [
+            {
+              "expr": "max by (annotation_deployed_commit) (kube_pod_annotations{namespace=\"production\", pod=~\"crypto-bot-backend.*\", annotation_deployed_commit=~\".+\"})",
+              "instant": true,
+              "format": "table",
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            { "id": "labelsToFields", "options": {} },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": { "Time": true, "Value": true },
+                "renameByName": { "annotation_deployed_commit": "Version deployee" }
+              }
             }
           ]
         },
