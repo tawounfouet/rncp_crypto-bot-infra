@@ -10,25 +10,37 @@ Un seul Grafana (namespace `monitoring`, deploye via ArgoCD) centralise l'etat d
 
 | Environnement | Source | Ce qu'on voit |
 |---|---|---|
-| `dev` (K8s) | Prometheus in-cluster (dashboard "Infra K8s") | CPU/RAM/etat des pods |
-| `staging` (K8s) | Prometheus in-cluster + Promtail K8s (logs) | CPU/RAM/etat des pods + logs |
-| `production` (K8s) | Prometheus in-cluster + Promtail K8s (logs) | CPU/RAM/etat des pods + logs |
+| `dev` (K8s) | Prometheus in-cluster | CPU/RAM/etat des pods, version (si trackee, cf. plus bas) |
+| `staging` (K8s) | Prometheus in-cluster + Promtail K8s + Postgres | CPU/RAM/etat/version des pods, logs, utilisateurs |
+| `production` (K8s) | Prometheus in-cluster + Promtail K8s + Postgres | CPU/RAM/etat/version des pods, logs, utilisateurs |
 | VM AWS Liora (staging/prod fallback) | Promtail sur la VM (logs, `{source="vm-aws"}`) | Logs staging/prod, distincts des logs K8s |
-| VM AWS Liora (metriques CPU/RAM/etat) | node_exporter + blackbox-exporter, via `tailscale-proxy` | CPU/RAM de la VM, `/health` staging et prod independants |
+| VM AWS Liora (metriques) | node_exporter + cAdvisor + blackbox-exporter, via `tailscale-proxy` | CPU/RAM machine + par service, `/health` staging et prod independants |
 
 Les pods K8s n'ont pas d'interface Tailscale par eux-memes : Prometheus et
 blackbox-exporter atteignent la VM AWS via un pod dedie, `tailscale-proxy`
 (namespace `monitoring`), qui rejoint le tailnet en mode proxy SOCKS5/HTTP
 (`:1055`) — voir section dediee plus bas.
 
-Utilisateurs enregistres / etat DB : requetes directes sur les Postgres de chaque
-environnement (datasource Postgres native de Grafana, ou requete SQL manuelle —
-voir [ONBOARDING.md §4](ONBOARDING.md#4-consulter-les-secrets-mots-de-passe-bdd-cles-api)
-pour recuperer les credentials).
+**Utilisateurs (inscrits/connectes)** : panel "Utilisateurs" du dashboard "Infra K8s",
+datasources PostgreSQL natives (Dev/Staging/Production). **Ne couvre pas la VM AWS** :
+PostgreSQL est un protocole TCP brut, `tailscale-proxy` ne route que du HTTP
+(Infinity/blackbox) — cf. section dediee plus bas.
+
+**Version deployee (K8s)** : lue depuis l'annotation `deployed-commit` (le sha reel,
+pose par le job CI `update:manifests`) via `kube-state-metrics`, **pas** depuis
+`/health` (qui renvoie une chaine hardcodee `"1.0.0"` cote code applicatif, sans
+rapport avec le commit reellement deploye). `dev` n'a pas cette annotation (namespace
+non gere par ArgoCD/kustomize, deploye via `dev-deploy.sh`) — le dashboard affiche
+alors "non trackee (deploiement manuel)" plutot qu'un vide.
 
 ## Acces
 
-Via port-forward (voir [ONBOARDING.md](ONBOARDING.md#acces-aux-services-app--bases-de-donnees)) :
+**Sans kubectl** (equipe, demo) : http://grafana.crypto-bot.local — ingress sur la
+meme IP MetalLB que le reste (`10.10.0.240`), ajouter l'entree `/etc/hosts` comme pour
+les autres services (voir [ONBOARDING.md](ONBOARDING.md)). Grafana garde son propre
+login (`admin` + secret `grafana-admin`).
+
+**Via port-forward** (voir [ONBOARDING.md](ONBOARDING.md#acces-aux-services-app--bases-de-donnees)) :
 
 ```bash
 ./scripts/port-forward.sh infra
@@ -41,6 +53,17 @@ Via port-forward (voir [ONBOARDING.md](ONBOARDING.md#acces-aux-services-app--bas
   ```
   puis http://localhost:9090/targets pour verifier l'etat des cibles de scrape.
 
+## Version Grafana et compatibilite des plugins
+
+Le chart `loki-stack` epingle Grafana `10.3.3` par defaut — **trop ancien pour le
+plugin Infinity** (utilise pour les tuiles etat+version des 5 environnements) :
+erreur navigateur `SystemJS Error#7` au chargement de `react/jsx-runtime` (import
+maps, requiert Grafana >=10.4.8 meme sur la plus ancienne version compatible du
+plugin, 3.4.1). Verifie sur `grafana.com/api/plugins/yesoreyeram-infinity-datasource/versions`
+avant de choisir : `grafana.image.tag: 11.3.1` (memes que le monitoring dev local) +
+`plugins: [yesoreyeram-infinity-datasource 3.4.1]` (epingle, versions >=3.5 exigent
+Grafana >=11.6).
+
 ## Ce qui est deploye (namespace `monitoring`)
 
 Tout passe par le chart Helm `loki-stack` (deja utilise pour Loki/Promtail/Grafana),
@@ -49,14 +72,20 @@ node-exporter + kube-state-metrics), plus un chart separe `prometheus-blackbox-e
 Voir `argocd/monitoring-app.yaml`.
 
 - **prometheus-server** : scrape et stocke (retention 15j, PVC 8Gi `local-path`)
-- **kube-state-metrics** : etat des pods/deploiements des 3 namespaces `dev`/`staging`/`production`
+- **kube-state-metrics** : etat des pods/deploiements des 3 namespaces `dev`/`staging`/`production`,
+  + annotation `deployed-commit` exposee via `metricAnnotationsAllowList: ["pods=[deployed-commit]"]`
+  (l'annotation est posee sur le **pod template**, pas sur le Deployment — `pods=`, pas `deployments=`,
+  premier essai infructueux avant de verifier avec `kubectl get pods ... -o jsonpath='{.metadata.annotations}'`)
 - **node-exporter** (DaemonSet, 3 nœuds Talos, tolerations control-plane incluses) : CPU/RAM des machines physiques du cluster
 - **blackbox-exporter** : sondes HTTP a la demande (pas de metriques propres, cf. ci-dessous)
+- **tailscale-proxy** : pod qui rejoint le tailnet pour joindre la VM AWS (cf. section dediee)
 - alertmanager et pushgateway sont **desactives** (pas necessaires pour un dashboard de suivi, economise de la RAM)
 
 Le datasource Grafana "Prometheus" est cree automatiquement par le sidecar de
 datasources du chart (deja actif pour Loki) des que `prometheus.enabled: true` —
-aucune config manuelle cote Grafana.
+aucune config manuelle cote Grafana. Le datasource "Infinity" et les 3 datasources
+PostgreSQL (Dev/Staging/Production) sont provisionnes explicitement (cle `grafana.datasources`),
+cf. sections dediees.
 
 ## VM AWS Liora — monitoring du fallback
 
@@ -122,6 +151,46 @@ curl -s http://localhost:9100/metrics | head -5   # verif locale
 Reachable uniquement via Tailscale (`100.100.226.42:9100` au moment de l'ecriture,
 verifier l'IP actuelle avec `tailscale status`), **pas** expose publiquement — voir
 [ONBOARDING.md §VM AWS Liora sur le tailnet](ONBOARDING.md#vm-aws-liora-sur-le-tailnet).
+
+### cAdvisor (sur la VM, une seule fois) — detail CPU/RAM par service
+
+```bash
+docker run -d --name cadvisor --restart=always \
+  --privileged \
+  -v /:/rootfs:ro \
+  -v /var/run:/var/run:ro \
+  -v /sys:/sys:ro \
+  -v /var/lib/docker/:/var/lib/docker:ro \
+  -v /dev/disk/:/dev/disk:ro \
+  -p 8081:8080 \
+  gcr.io/cadvisor/cadvisor:v0.52.1
+```
+
+> **Piege 1 — port** : `:8080` est deja pris par Airflow sur cette VM (`docker run`
+> echoue avec `port is already allocated`) — mappe sur `:8081` cote hote.
+>
+> **Piege 2 — version** : `v0.49.1` (celle utilisee pour le monitoring dev local,
+> `crypto-bot-app/monitoring/`) echoue a resoudre les conteneurs sur cette VM
+> (Ubuntu recent, cgroup v2 + systemd) : logs remplis de
+> `failed getting container info for "/system.slice/docker-<id>.scope": unknown container`
+> et aucune metrique `container_*` par service (seuls les cgroups systemd bruts
+> apparaissent, `id="/system.slice/..."`, jamais `name="<service>"`). `v0.52.1`
+> gere ce format nativement — verifie manuellement (`curl .../metrics | grep container_cpu`)
+> avant de cabler le scrape Prometheus.
+
+Scrape (meme mecanisme `proxy_url` que `node_exporter`, cible `:8081`) :
+
+```yaml
+- job_name: cadvisor_vm
+  proxy_url: http://tailscale-proxy.monitoring.svc.cluster.local:1055
+  metrics_path: /metrics
+  static_configs:
+    - targets: ["100.100.226.42:8081"]
+```
+
+Requetes dashboard : `container_cpu_usage_seconds_total{job="cadvisor_vm", name!=""}` /
+`container_memory_working_set_bytes{job="cadvisor_vm", name!=""}`, label `name`
+directement lisible (`promtail`, `staging-backend`, `staging-frontend`, ...).
 
 ### blackbox-exporter (in-cluster) — sondes `/health`
 
@@ -294,9 +363,46 @@ docker run -d --name promtail --restart=always \
 
 Jamais melanges — deux jeux de labels distincts par construction.
 
-## Piege rencontre — `argocd/*.yaml` pas auto-applique
+## Utilisateurs inscrits/connectes (datasources PostgreSQL)
+
+3 datasources PostgreSQL natives (Dev/Staging/Production, `argocd/monitoring-app.yaml`
+cle `grafana.datasources`), identifiants charges via `envFromSecret: grafana-postgres-creds`
+(SealedSecret, `monitoring/grafana-postgres-creds-sealed.yaml`) et interpoles dans le
+provisioning avec la syntaxe `$VAR_NAME` (supportee nativement par Grafana) — **jamais**
+de mot de passe en clair dans `argocd/monitoring-app.yaml`.
+
+Requete type (panel "Utilisateurs", une target par environnement, transform `merge`) :
+```sql
+SELECT 'staging' AS environnement,
+  (SELECT count(*) FROM users) AS inscrits,
+  (SELECT count(*) FROM user_sessions WHERE expires_at > now()) AS connectes
+```
+
+**VM AWS non couverte** : contrairement a `node_exporter`/`cAdvisor`/blackbox-exporter
+(HTTP, routables via `tailscale-proxy`), le driver PostgreSQL de Grafana parle un
+protocole **TCP brut** que `tailscale-proxy` (mode SOCKS5/HTTP) ne sait pas relayer
+nativement pour ce type de datasource — limitation distincte de celle deja resolue
+pour les metriques/logs, non retenue avant la soutenance.
+
+## Piege rencontre — `argocd/*.yaml` pas auto-applique (et sa propagation)
 
 Voir [ARCHITECTURE.md — App-of-apps](ARCHITECTURE.md#gitops-avec-argocd) : pousser
 une modif de `argocd/monitoring-app.yaml` sur `main` ne suffisait pas avant
 `root-app` — il fallait un `kubectl apply -f argocd/monitoring-app.yaml` manuel en
 plus. Resolu par le pattern app-of-apps (`root-app` surveille `argocd/`).
+
+> **Piege residuel** : meme avec `root-app`, un `argocd.argoproj.io/refresh=hard`
+> sur l'app `monitoring` juste apres un push peut ne rien changer si **`root-app`
+> lui-meme** n'a pas encore relu son propre dossier `argocd/` (son polling a son
+> propre rythme, independant du push). Verifiable via
+> `kbot get application root-app -n argocd -o jsonpath='{.status.sync.revision}'`
+> (doit matcher le dernier commit) — si perime, rafraichir `root-app` **avant**
+> `monitoring` :
+> ```bash
+> kbot annotate application root-app -n argocd argocd.argoproj.io/refresh=hard --overwrite
+> # attendre quelques secondes, puis
+> kbot annotate application monitoring -n argocd argocd.argoproj.io/refresh=hard --overwrite
+> ```
+> Vecu en pratique plusieurs fois : `monitoring` affichait "Synced" mais sur une
+> revision git perimee (`status.sync.revisions`), le changement n'atteignait jamais
+> les pods tant que `root-app` n'etait pas rafraichi en premier.

@@ -284,13 +284,17 @@ flowchart TB
         PROM["Promtail (3x DaemonSet)"]
         LOKI["Loki — PVC 5Gi"]
         PROMETHEUS["Prometheus server — PVC 8Gi"]
-        KSM["kube-state-metrics"]
+        KSM["kube-state-metrics\n(+ annotation deployed-commit)"]
         NODEEXP["node-exporter (3x DaemonSet)"]
         BB["blackbox-exporter\n(sondes HTTP externes)"]
-        GRAF["Grafana 10.3.3 — :3000"]
+        TSPROXY["tailscale-proxy\n(SOCKS5/HTTP :1055)"]
+        GRAF["Grafana 11.3.1 — :3000\n+ plugin Infinity 3.4.1\n+ datasources Postgres x3"]
     end
     NAMESPACES --> MON
-    BB -.->|"Tailscale\n:9100 /health"| VMAWS2["VM AWS Liora\nnode_exporter (systemd)"]
+    BB -.->|"proxy_url"| TSPROXY
+    NODEEXP -.->|"proxy_url"| TSPROXY
+    GRAF -.->|"HTTP_PROXY"| TSPROXY
+    TSPROXY -.->|"tailnet"| VMAWS2["VM AWS Liora\nnode_exporter + cAdvisor (systemd/Docker)\n+ Promtail -> Loki (push)"]
 
     style STGNS fill:#c3fae8,stroke:#087f5b
     style PRODNS fill:#ffe3e3,stroke:#e03131
@@ -419,6 +423,12 @@ vrai cluster multi-noeuds sur un seul serveur.
 5. **Fallback automatise** : docker-compose sur VM AWS avec backups toutes les 6h
 6. **Infra reproductible** : cluster jetable, Git est la source de verite
 7. **Resilience** : 2 workers K8s, pods reschedulables, fallback cloud
+8. **Observabilite qui sert vraiment** : le dashboard Grafana unifiant les 5
+   environnements (K8s + VM AWS) a permis de detecter en construction un
+   incident production reel (backend en CrashLoopBackOff depuis ~3h30, un
+   pod fantome tournant une ancienne version en parallele du nouveau) —
+   corrige dans la foulee (tag `v1.0.3`, nettoyage du pod). Pas un exemple
+   de demo, un incident reellement attrape et resolu grace au monitoring.
 8. **Securisation** : bridge isole, RBAC, Sealed Secrets, Cloudflare Tunnel, zero port entrant
 9. **Monitoring** : Loki + Promtail + Grafana pour les logs centralises de tous les pods
 10. **Optimisation des couts** : 97.5% d'economie vs full cloud AWS
