@@ -1,0 +1,26 @@
+# Expose Grafana sur l'ingress existant (10.10.0.240), accessible a toute
+# l'equipe sur le tailnet sans kubectl/kubeconfig (contrairement au
+# port-forward, qui necessite un acces admin au cluster). Grafana garde son
+# propre login (admin + mot de passe du secret grafana-admin) : cet ingress
+# n'ajoute pas d'authn supplementaire, il ne fait qu'exposer le service deja
+# protege par ce login.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana-ingress
+  namespace: monitoring
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: grafana.crypto-bot.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: monitoring-grafana
+                port:
+                  number: 80

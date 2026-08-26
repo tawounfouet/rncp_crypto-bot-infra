@@ -6,5 +6,6 @@ resources:
   - grafana-dashboard-crypto-bot.yaml
   - grafana-dashboard-infra.yaml
   - loki-ingress.yaml
+  - grafana-ingress.yaml
   - tailscale-proxy.yaml
   - tailscale-proxy-auth-sealed.yaml
