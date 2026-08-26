@@ -49,7 +49,12 @@ spec:
               mountPath: /var/lib/postgresql/data
           readinessProbe:
             exec:
-              command: ["pg_isready", "-U", "postgres"]
+              # -U reference la variable d'env POSTGRES_USER du conteneur (substitution
+              # $(VAR) supportee par les exec probes) -- pas "postgres" en dur : le user
+              # reel differe (genere par rotate_secrets.sh), "postgres" n'existe pas comme
+              # role -> FATAL en boucle toutes les 10s dans les logs sans casser la probe
+              # (le serveur repond quand meme, donc pas de CrashLoopBackOff).
+              command: ["pg_isready", "-U", "$(POSTGRES_USER)"]
             initialDelaySeconds: 30
             periodSeconds: 10
           resources:
