@@ -29,9 +29,11 @@ data:
               "type": "json",
               "source": "url",
               "format": "table",
+              "parser": "backend",
               "url": "http://crypto-bot-backend.dev.svc.cluster.local:8009/health",
               "url_options": { "method": "GET" },
               "root_selector": "",
+              "json_options": { "root_is_not_array": true },
               "columns": [
                 { "selector": "status", "text": "Statut", "type": "string" },
                 { "selector": "version", "text": "Version", "type": "string" }
@@ -51,9 +53,11 @@ data:
               "type": "json",
               "source": "url",
               "format": "table",
+              "parser": "backend",
               "url": "http://crypto-bot-backend.staging.svc.cluster.local:8009/health",
               "url_options": { "method": "GET" },
               "root_selector": "",
+              "json_options": { "root_is_not_array": true },
               "columns": [
                 { "selector": "status", "text": "Statut", "type": "string" },
                 { "selector": "version", "text": "Version", "type": "string" }
@@ -73,9 +77,11 @@ data:
               "type": "json",
               "source": "url",
               "format": "table",
+              "parser": "backend",
               "url": "http://crypto-bot-backend.production.svc.cluster.local:8009/health",
               "url_options": { "method": "GET" },
               "root_selector": "",
+              "json_options": { "root_is_not_array": true },
               "columns": [
                 { "selector": "status", "text": "Statut", "type": "string" },
                 { "selector": "version", "text": "Version", "type": "string" }
@@ -95,9 +101,11 @@ data:
               "type": "json",
               "source": "url",
               "format": "table",
+              "parser": "backend",
               "url": "http://100.100.226.42:8009/health",
               "url_options": { "method": "GET" },
               "root_selector": "",
+              "json_options": { "root_is_not_array": true },
               "columns": [
                 { "selector": "status", "text": "Statut", "type": "string" },
                 { "selector": "version", "text": "Version", "type": "string" }
@@ -117,9 +125,11 @@ data:
               "type": "json",
               "source": "url",
               "format": "table",
+              "parser": "backend",
               "url": "http://100.100.226.42:8010/health",
               "url_options": { "method": "GET" },
               "root_selector": "",
+              "json_options": { "root_is_not_array": true },
               "columns": [
                 { "selector": "status", "text": "Statut", "type": "string" },
                 { "selector": "version", "text": "Version", "type": "string" }
