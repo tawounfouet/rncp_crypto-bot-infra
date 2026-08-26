@@ -39,10 +39,72 @@ spec:
               - effect: NoSchedule
                 key: node-role.kubernetes.io/control-plane
                 operator: Exists
+          # Metriques (CPU/RAM/pods/nodes) pour dev+staging+production, en plus
+          # des logs Loki deja en place. Le sous-chart "prometheus" (bundle
+          # dans loki-stack) fournit prometheus-server + node-exporter (RAM/CPU
+          # hote par node Talos) + kube-state-metrics (etat des pods/deploiements).
+          # Le datasource Grafana "Prometheus" est cree automatiquement par le
+          # sidecar datasources (grafana.sidecar.datasources.enabled, deja true
+          # par defaut dans ce chart) des que prometheus.enabled=true.
+          prometheus:
+            enabled: true
+            server:
+              persistentVolume:
+                storageClassName: local-path
+                size: 8Gi
+              retention: "15d"
+              resources:
+                requests:
+                  cpu: 200m
+                  memory: 512Mi
+                limits:
+                  cpu: 500m
+                  memory: 1Gi
+            extraScrapeConfigs: |
+              - job_name: node_exporter
+                static_configs:
+                  - targets: ["100.100.226.42:9100"]
+
+              - job_name: blackbox
+                metrics_path: /probe
+                params:
+                  module: [http_2xx] # Look for a HTTP 200 response.
+                static_configs:
+                  - targets:
+                    - http://100.100.226.42:8009/health # check app staging
+                    - http://100.100.226.42:8010/health # check app prod
+                relabel_configs:
+                  - source_labels: [__address__]
+                    target_label: __param_target
+                  - source_labels: [__param_target]
+                    target_label: instance
+                  - target_label: __address__
+                    replacement: -prometheus-blackbox-exporter:9115  # The blackbox exporter's real hostname:port.
+                
+            # Alerting non necessaire pour un dashboard de suivi -- economise
+            # de la RAM (contrainte connue sur ce cluster, cf. incident 24/07).
+            alertmanager:
+              enabled: false
+            prometheus-pushgateway:
+              enabled: false
+            kube-state-metrics:
+              enabled: true
+            prometheus-node-exporter:
+              enabled: true
+              tolerations:
+                - effect: NoSchedule
+                  key: node-role.kubernetes.io/master
+                  operator: Exists
+                - effect: NoSchedule
+                  key: node-role.kubernetes.io/control-plane
+                  operator: Exists
     # Source 2 : Extras depuis le repo Git (dashboards Grafana, etc.)
     - repoURL: https://gitlab.com/dst_crypto/crypto-bot-infra.git
       targetRevision: main
       path: monitoring
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: prometheus-blackbox-exporter
+      targetRevision: 11.17.2
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
