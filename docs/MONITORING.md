@@ -8,13 +8,21 @@
 Un seul Grafana (namespace `monitoring`, deploye via ArgoCD) centralise l'etat des
 **5 environnements** du projet :
 
-| Environnement | Source des metriques | Ce qu'on voit |
+| Environnement | Source | Ce qu'on voit |
 |---|---|---|
-| `dev` (K8s) | Prometheus in-cluster | CPU/RAM/etat des pods |
-| `staging` (K8s) | Prometheus in-cluster | CPU/RAM/etat des pods |
-| `production` (K8s) | Prometheus in-cluster | CPU/RAM/etat des pods |
-| VM AWS Liora (machine) | node_exporter (systemd, sur la VM) | CPU/RAM de la VM, independant des apps |
-| VM AWS Liora (apps staging/prod fallback) | blackbox-exporter (in-cluster, sonde HTTP) | `/health` staging et prod, independants l'un de l'autre |
+| `dev` (K8s) | Prometheus in-cluster (dashboard "Infra K8s") | CPU/RAM/etat des pods |
+| `staging` (K8s) | Prometheus in-cluster + Promtail K8s (logs) | CPU/RAM/etat des pods + logs |
+| `production` (K8s) | Prometheus in-cluster + Promtail K8s (logs) | CPU/RAM/etat des pods + logs |
+| VM AWS Liora (staging/prod fallback) | Promtail sur la VM (logs, `{source="vm-aws"}`) | Logs staging/prod, distincts des logs K8s |
+| VM AWS Liora (metriques CPU/RAM/etat) | node_exporter + blackbox-exporter | **Prepares mais non fonctionnels**, voir limite ci-dessous |
+
+> **Limite connue** : `node_exporter`/`blackbox-exporter` sur la VM sont installes/configures
+> (cf. section dediee plus bas) mais **Prometheus in-cluster ne peut pas les scraper** :
+> les pods K8s n'ont pas d'interface Tailscale (contrairement aux logs, qui partent
+> de la VM *vers* le cluster via l'ingress — sens inverse, ca marche). Pas de fix
+> retenu avant la soutenance (options : pod sidecar Tailscale, operateur K8s officiel).
+> Etat de la VM verifiable manuellement : `tailscale ping vm-liora-crypto-bot`,
+> ou `curl http://100.x.x.x:9100/metrics` depuis un poste sur le tailnet.
 
 Utilisateurs enregistres / etat DB : requetes directes sur les Postgres de chaque
 environnement (datasource Postgres native de Grafana, ou requete SQL manuelle —
@@ -177,6 +185,81 @@ Fix applique :
 - **VM AWS** : l'IP Tailscale de la VM (`100.100.226.42`) a ete ajoutee a
   `ALLOWED_HOSTS`/`MLFLOW_SERVER_ALLOWED_HOSTS` dans `.env` sur la VM (a cote de
   l'IP publique deja presente) — sinon blackbox recoit aussi un 400.
+
+## Logs de la VM AWS (Promtail → Loki)
+
+Sens inverse du probleme metriques ci-dessus : ici c'est la VM qui **pousse** vers
+le cluster, pas le cluster qui scrape la VM — ca marche, a condition que la VM
+route vers `10.10.0.0/24` (meme route de subnet que pour joindre l'API K8s).
+
+### 1. Exposer Loki (cote cluster, deja fait)
+
+`monitoring/loki-ingress.yaml` route `loki.crypto-bot.local` (meme IP MetalLB que
+les autres ingress, `10.10.0.240`) vers `monitoring-loki:3100`. Pas d'authn sur ce
+endpoint : acceptable uniquement parce que seul le tailnet prive y accede (voir le
+commentaire dans le fichier avant de reutiliser ce pattern ailleurs).
+
+### 2. Sur la VM AWS
+
+```bash
+# Accepter la route vers le cluster (comme pour tout nouveau device tailnet)
+sudo tailscale set --accept-routes=true
+
+# Verifier
+curl -H "Host: loki.crypto-bot.local" http://10.10.0.240/ready   # doit repondre "ready"
+
+# Resolution DNS locale (lisibilite de la config Promtail)
+echo "10.10.0.240 loki.crypto-bot.local" | sudo tee -a /etc/hosts
+```
+
+Config Promtail (`/opt/promtail-config.yml`) — decouverte automatique des
+conteneurs Docker, avec extraction de `environment` (`staging`/`prod`) depuis le
+prefixe du nom de conteneur (`staging-backend`, `prod-backend`, ...) :
+
+```yaml
+server:
+  http_listen_port: 9080
+positions:
+  filename: /tmp/positions.yaml
+clients:
+  - url: http://loki.crypto-bot.local/loki/api/v1/push
+scrape_configs:
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+    relabel_configs:
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(staging|prod)-.*'
+        target_label: 'environment'
+        replacement: '$1'
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: 'container'
+      - target_label: 'source'
+        replacement: 'vm-aws'
+```
+
+```bash
+docker run -d --name promtail --restart=always \
+  --add-host=loki.crypto-bot.local:10.10.0.240 \
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  -v /opt/promtail-config.yml:/etc/promtail/config.yml:ro \
+  -v promtail-positions:/tmp \
+  grafana/promtail:3.5.1 -config.file=/etc/promtail/config.yml
+```
+
+> **Piege** : `--add-host` est indispensable. Le conteneur Docker a son propre
+> resolveur DNS, il ne lit **pas** le `/etc/hosts` de la VM — sans ce flag, erreur
+> `dial tcp: lookup loki.crypto-bot.local ... no such host` malgre l'entree hosts
+> ajoutee cote VM.
+
+### Distinguer les logs VM vs K8s dans Grafana/Loki
+
+- Logs K8s (Promtail in-cluster, auto-label) : `{namespace="staging"}`
+- Logs VM AWS (Promtail sur la VM, labels manuels) : `{source="vm-aws", environment="staging"}`
+
+Jamais melanges — deux jeux de labels distincts par construction.
 
 ## Piege rencontre — `argocd/*.yaml` pas auto-applique
 
