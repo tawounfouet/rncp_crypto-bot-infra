@@ -1,0 +1,16 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  creationTimestamp: null
+  name: tailscale-proxy-auth
+  namespace: monitoring
+spec:
+  encryptedData:
+    TS_AUTHKEY: AgAd87X0S5U2qYVidt0jj5rvRbEc8AM4JrgrDYc7affYemP6TwiyEncltWrOIRiKulmmYGo1rICq6jArMM8kwx3dpL8Xl+z1EZ9Y/dyb0oGGNdrGHbZVPQWJWA32ztXPfU11rLIFI8jhESBlHGXh8Qot4mUBCLXk+iWjTI8n/a6HGETCFt7Lw8E0bjwZqtKjtRF7XJi+3weiANRbUuND8/LJZUxg1UG0ADnOdlttbJeyhY7+C0MT8d+h+UdnzK3lN0w/D9PqjpI3lhU5nUlHfT6bRh+avgA3I8g4/qWe0OFvpErWItSBgI1Q4R0xFlhvnlHt41OewhuFY2Ijbvz43OGSMDKDzogtRKZS0QkOB+odbMB5mGtt8pmcLAmDXr3zdQPXXWjIdAYd5CSLBXghk4mjPQGzOdYQ3W0ka8IJE4Tg6RiteubTs6zifSqwaocRVFlTzlvUBWkTP7cTSebu2bEoPig4BgZlPojqm8bnbnxkOyOjQ4dzzKnJ8h/llgHu/fWx3fwouHkXA782ae5XYTIIwMeUUiB5ls1fccR3TUoHSRYrL8fAbHGvRxGrexODsfn7ZvXJUQjWo/kpeAESq+koTMSnvef2hsLbJ0VwuY/ozMNVVQnfi8iEN0o1D5T5JZnj4oWgQF4FxDf6gj3XvgXDthgTNXXL8NZNLc4QlG/UPx8tOjSA4nflm9kGMIcMLQdd4dz2kV9Kl1nXu1UMzNLWzkYkd0ll5sXoAWO4Em2dogep7vCRXrMtgB4Q51aXZw+JMcwiVBTgWpoAVJk/cA==
+  template:
+    metadata:
+      creationTimestamp: null
+      name: tailscale-proxy-auth
+      namespace: monitoring
+    type: Opaque

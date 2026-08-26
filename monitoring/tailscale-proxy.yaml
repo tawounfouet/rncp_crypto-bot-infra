@@ -1,0 +1,70 @@
+# Pod tailnet dedie au monitoring : rejoint le tailnet en mode "proxy"
+# (SOCKS5 + HTTP CONNECT sur :1055), pour que Prometheus et blackbox-exporter
+# puissent atteindre la VM AWS (100.100.226.42) -- les pods K8s n'ont eux-memes
+# aucune interface Tailscale, cf. docs/MONITORING.md pour le contexte complet.
+#
+# TS_USERSPACE=true : pas de TUN device / NET_ADMIN requis, compatible avec
+# les contraintes PodSecurity de Talos (pas de conteneur privilegie).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tailscale-proxy
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tailscale-proxy
+  template:
+    metadata:
+      labels:
+        app: tailscale-proxy
+    spec:
+      containers:
+        - name: tailscale
+          image: tailscale/tailscale:v1.76.6
+          env:
+            - name: TS_AUTHKEY
+              valueFrom:
+                secretKeyRef:
+                  name: tailscale-proxy-auth
+                  key: TS_AUTHKEY
+            - name: TS_HOSTNAME
+              value: monitoring-proxy-k8s
+            - name: TS_USERSPACE
+              value: "true"
+            - name: TS_SOCKS5_SERVER
+              value: ":1055"
+            - name: TS_OUTBOUND_HTTP_PROXY_LISTEN
+              value: ":1055"
+            - name: TS_STATE_DIR
+              value: "/var/lib/tailscale"
+          volumeMounts:
+            - name: tailscale-state
+              mountPath: /var/lib/tailscale
+          ports:
+            - containerPort: 1055
+              name: proxy
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      volumes:
+        - name: tailscale-state
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tailscale-proxy
+  namespace: monitoring
+spec:
+  selector:
+    app: tailscale-proxy
+  ports:
+    - port: 1055
+      targetPort: 1055
+      name: proxy

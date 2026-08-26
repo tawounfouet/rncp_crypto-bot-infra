@@ -85,6 +85,10 @@ spec:
                   memory: 1Gi
             extraScrapeConfigs: |
               - job_name: node_exporter
+                # proxy_url : les pods K8s n'ont pas d'interface Tailscale, on
+                # sort via le pod tailscale-proxy (cf. monitoring/tailscale-proxy.yaml)
+                # qui, lui, est un vrai membre du tailnet.
+                proxy_url: http://tailscale-proxy.monitoring.svc.cluster.local:1055
                 static_configs:
                   - targets: ["100.100.226.42:9100"]
 
@@ -128,6 +132,21 @@ spec:
     - repoURL: https://prometheus-community.github.io/helm-charts
       chart: prometheus-blackbox-exporter
       targetRevision: 11.17.2
+      helm:
+        valuesObject:
+          config:
+            modules:
+              http_2xx:
+                prober: http
+                timeout: 5s
+                http:
+                  valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+                  follow_redirects: true
+                  preferred_ip_protocol: "ip4"
+                  # C'est ICI (pas dans le job Prometheus) que le proxy compte :
+                  # c'est blackbox-exporter lui-meme qui appelle la VM, Prometheus
+                  # ne fait qu'appeler blackbox-exporter (deja joignable in-cluster).
+                  proxy_url: http://tailscale-proxy.monitoring.svc.cluster.local:1055
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
