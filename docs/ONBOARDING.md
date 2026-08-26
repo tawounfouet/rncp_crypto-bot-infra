@@ -12,6 +12,7 @@ flowchart LR
     LAPTOP -->|VPN entreprise| PROXMOX_UI["Proxmox\nWeb UI :8006 / Shell SSH :22"]
     LAPTOP -->|"Tailscale VPN\nsubnet 10.10.0.0/24"| K8S_API["K8s API :6443\nkubeconfig admin@crypto-bot"]
     LAPTOP -->|SSH internet| VMAWS["VM AWS\ndocker-compose (fallback)"]
+    K8S_API -.->|"Tailscale\n(node direct, pas subnet)"| VMAWS
 
     K8S_API --> NAMESPACES["kubectl port-forward\nscripts/port-forward.sh"]
     NAMESPACES --> DEV["dev"]
@@ -262,6 +263,24 @@ tailscale up --accept-routes
 ```
 
 Puis approuver les routes dans la console Tailscale (login.tailscale.com → Machines → pve1 → Edit route settings).
+
+### VM AWS Liora sur le tailnet
+
+Depuis l'ajout du monitoring (voir [MONITORING.md](MONITORING.md)), la VM AWS est
+elle-meme un **device du tailnet** (`vm-liora-crypto-bot`), pas juste jointe par une
+route de subnet comme le cluster K8s. Elle n'annonce aucune route — c'est un node
+direct, au meme titre qu'un laptop :
+
+```bash
+# Sur la VM AWS (une seule fois)
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up
+```
+
+Ca lui donne une IP `100.x.x.x` stable, joignable par tout le tailnet sans exposer
+de port dans le security group AWS (contrairement a l'IP publique, deja utilisee
+pour le reverse proxy). C'est ce chemin que `blackbox-exporter` (dans le cluster)
+utilise pour sonder l'etat de la VM en fallback, cf. [MONITORING.md](MONITORING.md).
 
 ---
 

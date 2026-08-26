@@ -283,9 +283,14 @@ flowchart TB
     subgraph MON["Monitoring — ns: monitoring (ArgoCD GitOps)"]
         PROM["Promtail (3x DaemonSet)"]
         LOKI["Loki — PVC 5Gi"]
+        PROMETHEUS["Prometheus server — PVC 8Gi"]
+        KSM["kube-state-metrics"]
+        NODEEXP["node-exporter (3x DaemonSet)"]
+        BB["blackbox-exporter\n(sondes HTTP externes)"]
         GRAF["Grafana 10.3.3 — :3000"]
     end
     NAMESPACES --> MON
+    BB -.->|"Tailscale\n:9100 /health"| VMAWS2["VM AWS Liora\nnode_exporter (systemd)"]
 
     style STGNS fill:#c3fae8,stroke:#087f5b
     style PRODNS fill:#ffe3e3,stroke:#e03131
@@ -336,11 +341,22 @@ TAG vX.X
 
 | Application ArgoCD | Namespace | Sync | Strategie |
 |-------------------|-----------|------|-----------|
+| `root-app` | argocd | **Auto-sync** + prune + selfHeal | App-of-apps, voir ci-dessous |
 | `crypto-bot-staging` | staging | **Auto-sync** + prune + selfHeal | Chaque commit CI declenche un rollout |
 | `crypto-bot-production` | production | **Manuel** | Review avant sync, tag versionne |
-| `monitoring` | monitoring | **Auto-sync** | Helm loki-stack + dashboards Grafana |
+| `monitoring` | monitoring | **Auto-sync** | Helm loki-stack (Loki + Prometheus + Grafana) + dashboards |
 
 Le namespace `dev` n'est pas gere par ArgoCD — deploiement manuel via `dev-deploy.sh`.
+
+**App-of-apps (`root-app`)** : les manifestes d'Application (`argocd/*.yaml`) ne sont
+**pas** auto-appliques par defaut — ce sont des objets `Application` normaux, pas des
+ressources qu'une Application existante gere. Editer `argocd/monitoring-app.yaml` et
+pousser sur `main` ne suffit donc pas : sans `root-app`, il faut un
+`kubectl apply -f argocd/<fichier>.yaml` manuel a chaque modification (piege rencontre
+en ajoutant Prometheus au monitoring, cf. `docs/MONITORING.md`). `root-app` (source :
+repertoire `argocd/`, auto-sync) resout ca en se surveillant lui-meme, y compris les
+3 autres Applications qu'il contient — un seul `kubectl apply -f argocd/root-app.yaml`
+a vie (le bootstrap initial, forcement manuel car rien ne le gere avant sa creation).
 
 ### Choix technologiques
 
