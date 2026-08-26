@@ -40,6 +40,12 @@ spec:
             # grafana.com/api/plugins avant de choisir).
             plugins:
               - yesoreyeram-infinity-datasource 3.4.1
+            # Charge grafana-postgres-creds (SealedSecret, cf. monitoring/) comme
+            # variables d'env -- utilisees ci-dessous via interpolation $VAR dans
+            # les datasources Postgres (syntaxe supportee nativement par le
+            # provisioning Grafana, cf. docs "Configure Grafana using environment
+            # variables"). Jamais de mot de passe en clair dans ce fichier.
+            envFromSecret: grafana-postgres-creds
             datasources:
               infinity-datasource.yaml:
                 apiVersion: 1
@@ -48,6 +54,42 @@ spec:
                     type: yesoreyeram-infinity-datasource
                     access: proxy
                     isDefault: false
+              postgres-datasources.yaml:
+                apiVersion: 1
+                datasources:
+                  - name: Postgres Dev
+                    type: postgres
+                    access: proxy
+                    url: postgres.dev.svc.cluster.local:5432
+                    database: crypto_bot_db
+                    user: $DEV_POSTGRES_USER
+                    secureJsonData:
+                      password: $DEV_POSTGRES_PWD
+                    jsonData:
+                      sslmode: disable
+                      postgresVersion: 1400
+                  - name: Postgres Staging
+                    type: postgres
+                    access: proxy
+                    url: postgres.staging.svc.cluster.local:5432
+                    database: crypto_bot_db
+                    user: $STAGING_POSTGRES_USER
+                    secureJsonData:
+                      password: $STAGING_POSTGRES_PWD
+                    jsonData:
+                      sslmode: disable
+                      postgresVersion: 1400
+                  - name: Postgres Production
+                    type: postgres
+                    access: proxy
+                    url: postgres.production.svc.cluster.local:5432
+                    database: crypto_bot_db
+                    user: $PRODUCTION_POSTGRES_USER
+                    secureJsonData:
+                      password: $PRODUCTION_POSTGRES_PWD
+                    jsonData:
+                      sslmode: disable
+                      postgresVersion: 1400
             # HTTP_PROXY route les appels sortants de Grafana (dont ceux
             # d'Infinity vers la VM AWS, 100.100.226.42) via tailscale-proxy.
             # NO_PROXY exclut tout ce qui est deja joignable en direct
