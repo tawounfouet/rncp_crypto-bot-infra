@@ -17,7 +17,7 @@ patches:
     patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/image
-        value: registry.gitlab.com/dst_crypto/crypto-bot-app/backend:v1.0.2
+        value: registry.gitlab.com/dst_crypto/crypto-bot-app/backend:v1.0.3
       - op: add
         path: /spec/template/spec/containers/0/env/-
         value:
@@ -31,7 +31,7 @@ patches:
       - op: add
         path: /spec/template/metadata/annotations
         value:
-          deployed-commit: "b8b5b2f5"
+          deployed-commit: "9a107642"
 
   - target:
       kind: Deployment
@@ -39,7 +39,7 @@ patches:
     patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/image
-        value: registry.gitlab.com/dst_crypto/crypto-bot-app/frontend:v1.0.2
+        value: registry.gitlab.com/dst_crypto/crypto-bot-app/frontend:v1.0.3
       - op: add
         path: /spec/template/spec/containers/0/env/-
         value:
@@ -49,8 +49,8 @@ patches:
         path: /spec/template/spec/containers/0/env/-
         value:
           name: APP_VERSION
-          value: v1.0.2
+          value: v1.0.3
       - op: add
         path: /spec/template/metadata/annotations
         value:
-          deployed-commit: "b8b5b2f5"
+          deployed-commit: "9a107642"
