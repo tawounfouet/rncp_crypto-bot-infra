@@ -13,7 +13,7 @@ data:
       "tags": ["crypto-bot", "prometheus"],
       "title": "Crypto-Bot - Infra K8s (dev/staging/production)",
       "uid": "crypto-bot-infra",
-      "version": 4,
+      "version": 5,
       "time": { "from": "now-6h", "to": "now" },
       "timezone": "browser",
       "refresh": "30s",
@@ -160,10 +160,42 @@ data:
           ]
         },
         {
+          "id": 15,
+          "type": "timeseries",
+          "title": "CPU VM AWS",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+          "targets": [
+            {
+              "expr": "1 - avg(rate(node_cpu_seconds_total{mode=\"idle\", job=\"node_exporter\"}[5m]))",
+              "legendFormat": "VM AWS Liora"
+            }
+          ]
+        },
+        {
+          "id": 16,
+          "type": "timeseries",
+          "title": "RAM VM AWS",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+          "targets": [
+            {
+              "expr": "node_memory_MemAvailable_bytes{job=\"node_exporter\"}",
+              "legendFormat": "disponible"
+            },
+            {
+              "expr": "node_memory_MemTotal_bytes{job=\"node_exporter\"}",
+              "legendFormat": "total"
+            }
+          ]
+        },
+        {
           "id": 1,
           "type": "table",
           "title": "Etat des services (replicas disponibles / souhaitees)",
-          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 14 },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 22 },
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "targets": [
             {
@@ -199,7 +231,7 @@ data:
           "id": 2,
           "type": "timeseries",
           "title": "CPU par pod (dev/staging/production)",
-          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 22 },
+          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 30 },
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
           "targets": [
@@ -213,7 +245,7 @@ data:
           "id": 3,
           "type": "timeseries",
           "title": "RAM par pod (dev/staging/production)",
-          "gridPos": { "h": 9, "w": 12, "x": 12, "y": 22 },
+          "gridPos": { "h": 9, "w": 12, "x": 12, "y": 30 },
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
           "targets": [
@@ -227,7 +259,7 @@ data:
           "id": 4,
           "type": "timeseries",
           "title": "CPU des 3 noeuds Talos",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 31 },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 39 },
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
           "targets": [
@@ -241,7 +273,7 @@ data:
           "id": 5,
           "type": "timeseries",
           "title": "RAM disponible des 3 noeuds Talos",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 31 },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 39 },
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
           "targets": [
