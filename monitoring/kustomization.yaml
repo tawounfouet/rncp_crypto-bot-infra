@@ -8,5 +8,6 @@ resources:
   - loki-ingress.yaml
   - grafana-ingress.yaml
   - grafana-postgres-creds-sealed.yaml
+  - alertmanager-smtp-sealed.yaml
   - tailscale-proxy.yaml
   - tailscale-proxy-auth-sealed.yaml

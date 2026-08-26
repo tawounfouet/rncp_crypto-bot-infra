@@ -154,6 +154,31 @@ spec:
                 limits:
                   cpu: 500m
                   memory: 1Gi
+            # Regroupe les alertes (staging/prod down) et ne relance un mail que
+            # toutes les 12h max si l'incident persiste -- pas un mail par cycle
+            # de scrape, cf. alertmanager.config.route ci-dessous. serverFiles
+            # est au meme niveau que server: (pas imbrique dedans).
+            serverFiles:
+              "alerting_rules.yml":
+                groups:
+                  - name: crypto-bot-availability
+                    rules:
+                      - alert: K8sBackendDown
+                        expr: kube_deployment_status_replicas_available{namespace=~"staging|production", deployment="crypto-bot-backend"} == 0
+                        for: 5m
+                        labels:
+                          severity: critical
+                        annotations:
+                          summary: "Backend {{ $labels.namespace }} (K8s) indisponible"
+                          description: "Aucun pod crypto-bot-backend disponible dans {{ $labels.namespace }} depuis 5 minutes."
+                      - alert: VMAppDown
+                        expr: probe_success{job="blackbox"} == 0
+                        for: 5m
+                        labels:
+                          severity: critical
+                        annotations:
+                          summary: "App VM AWS indisponible ({{ $labels.instance }})"
+                          description: "La sonde /health sur {{ $labels.instance }} echoue depuis 5 minutes."
             extraScrapeConfigs: |
               - job_name: node_exporter
                 # proxy_url : les pods K8s n'ont pas d'interface Tailscale, on
@@ -187,10 +212,41 @@ spec:
                   - target_label: __address__
                     replacement: monitoring-prometheus-blackbox-exporter:9115  # The blackbox exporter's real hostname:port.
                 
-            # Alerting non necessaire pour un dashboard de suivi -- economise
-            # de la RAM (contrainte connue sur ce cluster, cf. incident 24/07).
+            # Alerte mail si staging/prod tombent (K8s ou VM AWS). Empreinte RAM
+            # faible (~30-50Mi), reactive malgre l'incident RAM du 24/07 --
+            # contrairement au dashboard seul, cette fonctionnalite a besoin
+            # d'alertmanager pour exister.
             alertmanager:
-              enabled: false
+              enabled: true
+              extraSecretMounts:
+                - name: smtp-secret
+                  mountPath: /etc/alertmanager/secrets
+                  secretName: alertmanager-smtp
+                  readOnly: true
+              config:
+                global:
+                  smtp_smarthost: "smtp.gmail.com:587"
+                  smtp_from: "nathalie.iara.avril@gmail.com"
+                  smtp_auth_username: "nathalie.iara.avril@gmail.com"
+                  smtp_auth_password_file: /etc/alertmanager/secrets/password
+                  smtp_require_tls: true
+                templates:
+                  - "/etc/alertmanager/*.tmpl"
+                route:
+                  receiver: email
+                  group_by: ["alertname"]
+                  group_wait: 30s
+                  group_interval: 5m
+                  # C'est ce champ qui repond au besoin "pas plus d'un mail
+                  # recurrent" : tant qu'une alerte reste active, aucun nouveau
+                  # mail avant 12h (independamment de group_interval, qui ne
+                  # regit que le regroupement de *nouvelles* alertes entrantes).
+                  repeat_interval: 12h
+                receivers:
+                  - name: email
+                    email_configs:
+                      - to: "nathalie.iara.avril@gmail.com"
+                        send_resolved: true
             prometheus-pushgateway:
               enabled: false
             kube-state-metrics:
