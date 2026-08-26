@@ -27,6 +27,26 @@ spec:
               dashboards:
                 enabled: true
                 label: grafana_dashboard
+            # Plugin JSON generique pour interroger /health (version, statut)
+            # sur les 5 environnements, K8s comme VM AWS.
+            plugins:
+              - yesoreyeram-infinity-datasource
+            datasources:
+              infinity-datasource.yaml:
+                apiVersion: 1
+                datasources:
+                  - name: Infinity
+                    type: yesoreyeram-infinity-datasource
+                    access: proxy
+                    isDefault: false
+            # HTTP_PROXY route les appels sortants de Grafana (dont ceux
+            # d'Infinity vers la VM AWS, 100.100.226.42) via tailscale-proxy.
+            # NO_PROXY exclut tout ce qui est deja joignable en direct
+            # in-cluster (Loki/Prometheus/K8s services), pour ne pas les
+            # faire transiter inutilement par le proxy.
+            env:
+              HTTP_PROXY: "http://tailscale-proxy.monitoring.svc.cluster.local:1055"
+              NO_PROXY: "localhost,127.0.0.1,.svc,.svc.cluster.local,.cluster.local,10.0.0.0/8"
           promtail:
             enabled: true
             config:
