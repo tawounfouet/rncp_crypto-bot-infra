@@ -1,0 +1,28 @@
+# Expose Loki (push API) sur l'ingress existant (10.10.0.240), pour que la VM
+# AWS (fallback docker-compose) puisse y pousser ses logs via Promtail, en
+# passant par la route de subnet Tailscale deja approuvee (pve1) -- pas besoin
+# d'ouvrir un nouveau port ni un NodePort.
+#
+# Pas d'authentification sur ce endpoint (Loki push API nu) : acceptable ici
+# car seul le tailnet prive route jusqu'a 10.10.0.240, pas d'exposition
+# publique. Ne pas reutiliser ce pattern pour un service sensible sans authn.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: loki-ingress
+  namespace: monitoring
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: loki.crypto-bot.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: monitoring-loki
+                port:
+                  number: 3100
