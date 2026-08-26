@@ -149,8 +149,12 @@ spec:
               # update:manifests dans .gitlab-ci.yml) comme metrique Prometheus
               # -- source "infra" fiable pour la version, contrairement a
               # /health (chaine hardcodee "1.0.0" cote code applicatif).
+              # "pods=" et pas "deployments=" : l'annotation est posee sur le
+              # pod template (/spec/template/metadata/annotations dans les
+              # patches kustomize), pas sur le Deployment lui-meme -- verifie
+              # apres un premier essai infructueux avec deployments=.
               metricAnnotationsAllowList:
-                - "deployments=[deployed-commit]"
+                - "pods=[deployed-commit]"
             prometheus-node-exporter:
               enabled: true
               tolerations:
