@@ -13,16 +13,24 @@ data:
       "tags": ["crypto-bot", "prometheus"],
       "title": "Crypto-Bot - Infra K8s (dev/staging/production)",
       "uid": "crypto-bot-infra",
-      "version": 3,
+      "version": 4,
       "time": { "from": "now-6h", "to": "now" },
       "timezone": "browser",
       "refresh": "30s",
       "panels": [
         {
+          "id": 20,
+          "type": "row",
+          "title": "Kubernetes (Proxmox)",
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+          "panels": []
+        },
+        {
           "id": 10,
           "type": "table",
           "title": "Dev (K8s)",
-          "gridPos": { "h": 6, "w": 5, "x": 0, "y": 0 },
+          "gridPos": { "h": 6, "w": 8, "x": 0, "y": 1 },
           "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
           "targets": [
             {
@@ -47,7 +55,7 @@ data:
           "id": 11,
           "type": "table",
           "title": "Staging (K8s)",
-          "gridPos": { "h": 6, "w": 5, "x": 5, "y": 0 },
+          "gridPos": { "h": 6, "w": 8, "x": 8, "y": 1 },
           "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
           "targets": [
             {
@@ -72,7 +80,7 @@ data:
           "id": 12,
           "type": "table",
           "title": "Production (K8s)",
-          "gridPos": { "h": 6, "w": 5, "x": 10, "y": 0 },
+          "gridPos": { "h": 6, "w": 8, "x": 16, "y": 1 },
           "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
           "targets": [
             {
@@ -94,10 +102,18 @@ data:
           ]
         },
         {
+          "id": 21,
+          "type": "row",
+          "title": "VM AWS (fallback)",
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 },
+          "panels": []
+        },
+        {
           "id": 13,
           "type": "table",
           "title": "Staging (VM AWS)",
-          "gridPos": { "h": 6, "w": 5, "x": 15, "y": 0 },
+          "gridPos": { "h": 6, "w": 12, "x": 0, "y": 8 },
           "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
           "targets": [
             {
@@ -122,7 +138,7 @@ data:
           "id": 14,
           "type": "table",
           "title": "Production (VM AWS)",
-          "gridPos": { "h": 6, "w": 4, "x": 20, "y": 0 },
+          "gridPos": { "h": 6, "w": 12, "x": 12, "y": 8 },
           "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "PD0067CAD9A63E081" },
           "targets": [
             {
@@ -147,7 +163,7 @@ data:
           "id": 1,
           "type": "table",
           "title": "Etat des services (replicas disponibles / souhaitees)",
-          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 6 },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 14 },
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "targets": [
             {
@@ -183,7 +199,7 @@ data:
           "id": 2,
           "type": "timeseries",
           "title": "CPU par pod (dev/staging/production)",
-          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 14 },
+          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 22 },
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
           "targets": [
@@ -197,7 +213,7 @@ data:
           "id": 3,
           "type": "timeseries",
           "title": "RAM par pod (dev/staging/production)",
-          "gridPos": { "h": 9, "w": 12, "x": 12, "y": 14 },
+          "gridPos": { "h": 9, "w": 12, "x": 12, "y": 22 },
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
           "targets": [
@@ -211,7 +227,7 @@ data:
           "id": 4,
           "type": "timeseries",
           "title": "CPU des 3 noeuds Talos",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 23 },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 31 },
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
           "targets": [
@@ -225,7 +241,7 @@ data:
           "id": 5,
           "type": "timeseries",
           "title": "RAM disponible des 3 noeuds Talos",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 23 },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 31 },
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
           "targets": [
