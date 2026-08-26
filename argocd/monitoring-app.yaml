@@ -42,12 +42,19 @@ spec:
               #   utilise par Promtail sur la VM (environment=staging/production)
               #   -- meme concept, meme label des deux cotes, un seul jeu de
               #   panels/variables suffit au lieu d'un doublon par origine.
+              #   Restreint aux 3 namespaces applicatifs : sans le regex, tous
+              #   les namespaces infra (argocd, kube-system, ingress-nginx, ...)
+              #   se retrouveraient aussi dans le variable "environment" cote
+              #   Grafana -- si le namespace ne matche pas, Promtail laisse le
+              #   label absent (comportement standard des relabel_configs).
               snippets:
                 extraRelabelConfigs:
                   - target_label: source
                     replacement: k8s-proxmox
                   - source_labels: [namespace]
+                    regex: '(dev|staging|production)'
                     target_label: environment
+                    replacement: '$1'
             tolerations:
               - effect: NoSchedule
                 key: node-role.kubernetes.io/master
