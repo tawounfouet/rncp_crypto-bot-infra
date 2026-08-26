@@ -163,22 +163,32 @@ spec:
                 groups:
                   - name: crypto-bot-availability
                     rules:
+                      # source/environment : memes noms de labels que le dashboard
+                      # logs (source=k8s-proxmox/vm-aws), pour rester coherent.
                       - alert: K8sBackendDown
                         expr: kube_deployment_status_replicas_available{namespace=~"staging|production", deployment="crypto-bot-backend"} == 0
                         for: 5m
                         labels:
                           severity: critical
+                          source: k8s-proxmox
                         annotations:
-                          summary: "Backend {{ $labels.namespace }} (K8s) indisponible"
-                          description: "Aucun pod crypto-bot-backend disponible dans {{ $labels.namespace }} depuis 5 minutes."
+                          summary: "[k8s-proxmox] {{ $labels.namespace }} indisponible"
+                          description: "Aucun pod crypto-bot-backend disponible -- source: k8s-proxmox, environnement: {{ $labels.namespace }}. Depuis 5 minutes."
                       - alert: VMAppDown
-                        expr: probe_success{job="blackbox"} == 0
+                        # environment derive du port dans l'URL sondee (8009=staging,
+                        # 8010=production, cf. docker-compose.staging.yml / .prod.yml).
+                        expr: |
+                          label_replace(
+                            label_replace(probe_success{job="blackbox"} == 0, "environment", "staging", "instance", ".*:8009.*"),
+                            "environment", "production", "instance", ".*:8010.*"
+                          )
                         for: 5m
                         labels:
                           severity: critical
+                          source: vm-aws
                         annotations:
-                          summary: "App VM AWS indisponible ({{ $labels.instance }})"
-                          description: "La sonde /health sur {{ $labels.instance }} echoue depuis 5 minutes."
+                          summary: "[vm-aws] {{ $labels.environment }} indisponible"
+                          description: "Sonde /health en echec -- source: vm-aws, environnement: {{ $labels.environment }} ({{ $labels.instance }}). Depuis 5 minutes."
             extraScrapeConfigs: |
               - job_name: node_exporter
                 # proxy_url : les pods K8s n'ont pas d'interface Tailscale, on
