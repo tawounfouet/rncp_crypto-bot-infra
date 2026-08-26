@@ -19,6 +19,13 @@ spec:
               size: 5Gi
           grafana:
             enabled: true
+            # Le chart loki-stack epingle 10.3.3 par defaut -- trop ancien pour
+            # le plugin Infinity (React/jsx-runtime via import maps, requiert
+            # >=10.4.8 meme sur sa plus vieille version compatible 3.4.1).
+            # 11.3.1 : meme version que le monitoring dev local (versions.env
+            # GRAFANA_IMAGE), gardee coherente.
+            image:
+              tag: 11.3.1
             admin:
               existingSecret: grafana-admin
               userKey: admin-user
@@ -28,9 +35,11 @@ spec:
                 enabled: true
                 label: grafana_dashboard
             # Plugin JSON generique pour interroger /health (version, statut)
-            # sur les 5 environnements, K8s comme VM AWS.
+            # sur les 5 environnements, K8s comme VM AWS. Epingle a 3.4.1 :
+            # derniere version compatible avec des Grafana < 11.6 (verifie sur
+            # grafana.com/api/plugins avant de choisir).
             plugins:
-              - yesoreyeram-infinity-datasource
+              - yesoreyeram-infinity-datasource 3.4.1
             datasources:
               infinity-datasource.yaml:
                 apiVersion: 1
