@@ -13,7 +13,7 @@ data:
       "tags": ["crypto-bot", "prometheus"],
       "title": "Crypto-Bot - Infra K8s (dev/staging/production)",
       "uid": "crypto-bot-infra",
-      "version": 8,
+      "version": 9,
       "time": { "from": "now-6h", "to": "now" },
       "timezone": "browser",
       "refresh": "30s",
@@ -152,7 +152,7 @@ data:
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "max by (annotation_deployed_commit) (kube_pod_annotations{namespace=\"dev\", pod=~\"crypto-bot-backend.*\", annotation_deployed_commit=~\".+\"})",
+              "expr": "max by (annotation_deployed_commit) (kube_pod_annotations{namespace=\"dev\", pod=~\"crypto-bot-backend.*\", annotation_deployed_commit=~\".+\"}) OR label_replace(vector(1), \"annotation_deployed_commit\", \"non trackee (deploiement manuel)\", \"\", \".*\")",
               "instant": true,
               "format": "table",
               "refId": "A"
@@ -222,7 +222,7 @@ data:
         {
           "id": 17,
           "type": "table",
-          "title": "Utilisateurs (inscrits / connectes) -- K8s uniquement, cf. limite VM AWS dans docs/MONITORING.md",
+          "title": "Utilisateurs",
           "gridPos": { "h": 6, "w": 24, "x": 0, "y": 31 },
           "targets": [
             {
