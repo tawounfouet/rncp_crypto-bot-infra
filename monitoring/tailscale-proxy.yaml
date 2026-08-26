@@ -39,6 +39,12 @@ spec:
               value: ":1055"
             - name: TS_STATE_DIR
               value: "/var/lib/tailscale"
+            # Sans ca, l'image detecte qu'elle tourne dans K8s et essaie par
+            # defaut de stocker son etat dans un Secret Kubernetes (necessite
+            # des permissions RBAC get/update qu'on ne donne pas ici) plutot
+            # que d'utiliser TS_STATE_DIR.
+            - name: TS_KUBE_SECRET
+              value: ""
           volumeMounts:
             - name: tailscale-state
               mountPath: /var/lib/tailscale
