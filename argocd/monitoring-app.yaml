@@ -32,13 +32,22 @@ spec:
             config:
               clients:
                 - url: http://monitoring-loki:3100/loki/api/v1/push
-              # Label "source" symetrique a celui pose sur les logs de la VM AWS
-              # (source=vm-aws, cf. docs/MONITORING.md) : permet de filtrer par
-              # origine independamment de l'environnement (namespace).
+              # Deux labels ajoutes pour un dashboard Grafana unifie K8s + VM AWS
+              # (cf. docs/MONITORING.md) :
+              # - source : symetrique a source=vm-aws sur les logs de la VM,
+              #   pour filtrer par origine independamment de l'environnement.
+              # - environment : recopie le namespace K8s (namespace est deja
+              #   pose par les relabel_configs par defaut du chart avant que
+              #   celui-ci ne s'execute) sous le meme nom de label que celui
+              #   utilise par Promtail sur la VM (environment=staging/production)
+              #   -- meme concept, meme label des deux cotes, un seul jeu de
+              #   panels/variables suffit au lieu d'un doublon par origine.
               snippets:
                 extraRelabelConfigs:
                   - target_label: source
                     replacement: k8s-proxmox
+                  - source_labels: [namespace]
+                    target_label: environment
             tolerations:
               - effect: NoSchedule
                 key: node-role.kubernetes.io/master
