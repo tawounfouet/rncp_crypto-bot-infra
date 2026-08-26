@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - grafana-admin-sealed.yaml
   - grafana-dashboard-crypto-bot.yaml
+  - grafana-dashboard-infra.yaml

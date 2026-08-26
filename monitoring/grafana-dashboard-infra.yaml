@@ -1,0 +1,131 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-infra
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  crypto-bot-infra.json: |
+    {
+      "editable": true,
+      "schemaVersion": 39,
+      "tags": ["crypto-bot", "prometheus"],
+      "title": "Crypto-Bot - Infra K8s (dev/staging/production)",
+      "uid": "crypto-bot-infra",
+      "version": 1,
+      "time": { "from": "now-6h", "to": "now" },
+      "timezone": "browser",
+      "refresh": "30s",
+      "panels": [
+        {
+          "id": 1,
+          "type": "table",
+          "title": "Etat des services (replicas disponibles / souhaitees)",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "targets": [
+            {
+              "expr": "kube_deployment_status_replicas_available{namespace=~\"dev|staging|production\"}",
+              "legendFormat": "{{namespace}} / {{deployment}}",
+              "instant": true,
+              "format": "table"
+            },
+            {
+              "expr": "kube_deployment_spec_replicas{namespace=~\"dev|staging|production\"}",
+              "legendFormat": "{{namespace}} / {{deployment}}",
+              "instant": true,
+              "format": "table"
+            }
+          ],
+          "transformations": [
+            { "id": "merge", "options": {} },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": { "Time": true, "__name__": true },
+                "renameByName": {
+                  "namespace": "Environnement",
+                  "deployment": "Service",
+                  "Value #A": "Disponibles",
+                  "Value #B": "Souhaitees"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "type": "timeseries",
+          "title": "CPU par pod (dev/staging/production)",
+          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+          "targets": [
+            {
+              "expr": "sum by (namespace, pod) (rate(container_cpu_usage_seconds_total{namespace=~\"dev|staging|production\", container!=\"\"}[5m]))",
+              "legendFormat": "{{namespace}} / {{pod}}"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "type": "timeseries",
+          "title": "RAM par pod (dev/staging/production)",
+          "gridPos": { "h": 9, "w": 12, "x": 12, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+          "targets": [
+            {
+              "expr": "sum by (namespace, pod) (container_memory_working_set_bytes{namespace=~\"dev|staging|production\", container!=\"\"})",
+              "legendFormat": "{{namespace}} / {{pod}}"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "type": "timeseries",
+          "title": "CPU des 3 noeuds Talos",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 17 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+          "targets": [
+            {
+              "expr": "1 - avg by (node) (rate(node_cpu_seconds_total{mode=\"idle\", job=\"kubernetes-service-endpoints\"}[5m]))",
+              "legendFormat": "{{node}}"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "type": "timeseries",
+          "title": "RAM disponible des 3 noeuds Talos",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 17 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+          "targets": [
+            {
+              "expr": "node_memory_MemAvailable_bytes{job=\"kubernetes-service-endpoints\"}",
+              "legendFormat": "{{node}} disponible"
+            },
+            {
+              "expr": "node_memory_MemTotal_bytes{job=\"kubernetes-service-endpoints\"}",
+              "legendFormat": "{{node}} total"
+            }
+          ]
+        }
+      ],
+      "templating": {
+        "list": [
+          {
+            "name": "datasource",
+            "type": "datasource",
+            "query": "prometheus",
+            "label": "Datasource",
+            "hide": 0,
+            "includeAll": false,
+            "multi": false
+          }
+        ]
+      }
+    }
