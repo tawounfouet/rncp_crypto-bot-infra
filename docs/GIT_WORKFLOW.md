@@ -142,6 +142,8 @@ GitLab > `crypto-bot-app` > Settings > CI/CD > Variables :
 | `SSH_PRIVATE_KEY` | Cle SSH pour deploy VM AWS | staging, tags |
 | `VM_HOST` | IP/hostname de la VM AWS | staging, tags |
 | `SSH_USER` | Utilisateur SSH sur la VM AWS | staging, tags |
+| `VM_REGISTRY_USER` | Deploy token (`read_registry`) pour que la VM pull les images — distinct du `CI_REGISTRY_USER` predefini (ephemere, scope au job CI) | staging, tags |
+| `VM_REGISTRY_PASSWORD` | Mot de passe associe au deploy token ci-dessus | staging, tags |
 
 `GROUP_PAT_TOKEN` : creer sur GitLab > Avatar > Edit profile > Access Tokens
 (scope `write_repository`, expiration 1 an max), puis l'ajouter comme variable
