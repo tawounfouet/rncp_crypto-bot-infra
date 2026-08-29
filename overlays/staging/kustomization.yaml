@@ -30,7 +30,7 @@ patches:
       - op: add
         path: /spec/template/metadata/annotations
         value:
-          deployed-commit: "66fb41a4"
+          deployed-commit: "f05afc06"
 
   - target:
       kind: Deployment
@@ -48,8 +48,8 @@ patches:
         path: /spec/template/spec/containers/0/env/-
         value:
           name: APP_VERSION
-          value: 66fb41a4
+          value: f05afc06
       - op: add
         path: /spec/template/metadata/annotations
         value:
-          deployed-commit: "66fb41a4"
+          deployed-commit: "f05afc06"
