@@ -22,7 +22,10 @@ spec:
     spec:
       containers:
         - name: tailscale
-          image: tailscale/tailscale:v1.76.6
+          # v1.76.6 avait une CVE connue -- corrige le 2026-09-03 (incident
+          # monitoring-proxy-k8s bloque sur l'auto-update, cf. crypto-bot-infra
+          # (datiara) versions.env pour le suivi de version cote actif).
+          image: tailscale/tailscale:v1.102.3
           env:
             - name: TS_AUTHKEY
               valueFrom:
@@ -60,7 +63,20 @@ spec:
               memory: 128Mi
       volumes:
         - name: tailscale-state
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: tailscale-proxy-state
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: tailscale-proxy-state
+  namespace: monitoring
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 100Mi
 ---
 apiVersion: v1
 kind: Service
