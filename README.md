@@ -32,3 +32,4 @@ docs/                   Documentation
 - **ArgoCD** : `./scripts/port-forward.sh infra` puis https://localhost:8443
 - **Grafana** : http://localhost:3000 (via port-forward infra)
 - **Cluster** : `kubectl --context admin@crypto-bot get nodes`
+- **Cluster local (Kind)** : `kubectl get nodes` (guide de déploiement local : [DEPLOIEMENT_KIND_INFRA.md](../DEPLOIEMENT_KIND_INFRA.md))
