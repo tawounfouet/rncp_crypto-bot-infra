@@ -56,6 +56,7 @@ puis `./scripts/local-down.sh [--purge]`.
 
 | Document | Pour qui | Contenu |
 |----------|----------|---------|
+| [docs/local-kind/](docs/local-kind/README.md) | Jury / dev | **Environnement local Kind** : accès, identifiants, plans (monitoring, services, démo) |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Tout le monde | Decisions d'archi, choix technos, diagrammes |
 | [ONBOARDING.md](docs/ONBOARDING.md) | Nouveaux membres | Acces cluster, kubectl, secrets, workflow dev |
 | [GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md) | Developpeurs | Branches, CI/CD, sync repos, variables |
