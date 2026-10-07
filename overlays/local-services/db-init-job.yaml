@@ -1,0 +1,56 @@
+# Job d'initialisation des bases de donnees du projet (parite avec
+# crypto-bot-app/init-scripts/init-user-db.sh du Postgres Compose).
+# Le PVC Postgres du Kind est deja initialise : ces bases n'existent pas encore.
+# Idempotent (CREATE DATABASE conditionnel), rejouable sans risque.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-init
+  labels:
+    app: db-init
+spec:
+  backoffLimit: 6
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app: db-init
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: db-init
+          image: postgres:14
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              echo "Attente de PostgreSQL..."
+              until pg_isready -h postgres -p 5432 -U "$POSTGRES_USER" >/dev/null 2>&1; do sleep 2; done
+              for db in airflow mlflow; do
+                if psql -h postgres -U "$POSTGRES_USER" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$db'" | grep -q 1; then
+                  echo "base '$db' deja presente";
+                else
+                  echo "creation de la base '$db'";
+                  psql -v ON_ERROR_STOP=1 -h postgres -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE $db";
+                fi
+              done
+              echo "Bases airflow + mlflow pretes."
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: crypto-bot-secrets
+                  key: POSTGRES_USER
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: crypto-bot-secrets
+                  key: POSTGRES_PWD
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi

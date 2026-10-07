@@ -1,0 +1,12 @@
+# Volumes partages pour les services ML.
+# artifacts : ecrit par ml-api (entrainements) ET lu par mlflow-ui -> PVC RWO partage
+# (un seul noeud Kind, donc RWO suffit pour un montage simultane).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: models-artifacts
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi

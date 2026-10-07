@@ -1,0 +1,20 @@
+# Overlay LOCAL-SERVICES -- services restants du docker-compose (Airflow + MLflow + ml-api)
+# au-dessus de l'environnement local de base.
+#
+#   kubectl apply -k overlays/local-services      (ou ./scripts/local-services-up.sh)
+#
+# Herite de overlays/local (app : postgres, minio, backend, frontend, adminer) et ajoute
+# Airflow (webserver/scheduler/init), l'API ML et MLflow UI. Les images sont chargees par
+# "kind load docker-image" (tags locaux airflow:local et ml:local).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: dev
+
+resources:
+  - ../local
+  - secret-airflow.yaml
+  - models-pvc.yaml
+  - db-init-job.yaml
+  - airflow.yaml
+  - mlflow.yaml

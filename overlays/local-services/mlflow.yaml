@@ -1,0 +1,197 @@
+# ML API (FastAPI, :8010) + MLflow UI (:5001) sur Kind -- equivalents des services
+# crypto-bot-ml-api et mlflow-ui de crypto-bot-app/docker-compose.yml.
+# Les deux partagent la meme image (models/Dockerfile) -> tag local "ml:local".
+# Backend store MLflow : base PostgreSQL "mlflow" (creee par le Job db-init).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crypto-bot-ml-api
+  labels:
+    app: crypto-bot-ml-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crypto-bot-ml-api
+  template:
+    metadata:
+      labels:
+        app: crypto-bot-ml-api
+    spec:
+      initContainers:
+        - name: wait-for-mlflow-db
+          image: postgres:14
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args:
+            - >-
+              until pg_isready -h postgres -p 5432 -U "$POSTGRES_USER" >/dev/null 2>&1 &&
+              psql -h postgres -U "$POSTGRES_USER" -d mlflow -c 'SELECT 1' >/dev/null 2>&1;
+              do echo "attente de la base mlflow..."; sleep 3; done
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef: { name: crypto-bot-secrets, key: POSTGRES_USER }
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef: { name: crypto-bot-secrets, key: POSTGRES_PWD }
+      containers:
+        - name: ml-api
+          image: ml:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8010
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef: { name: crypto-bot-secrets, key: POSTGRES_USER }
+            - name: POSTGRES_PWD
+              valueFrom:
+                secretKeyRef: { name: crypto-bot-secrets, key: POSTGRES_PWD }
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef: { name: crypto-bot-secrets, key: MINIO_ACCESS_KEY }
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef: { name: crypto-bot-secrets, key: MINIO_SECRET_KEY }
+            - name: MLFLOW_TRACKING_URI
+              value: "postgresql+psycopg2://$(POSTGRES_USER):$(POSTGRES_PWD)@postgres:5432/mlflow"
+            - name: ENVIRONMENT
+              value: development
+            - name: DEBUG
+              value: "true"
+            - name: MINIO_ENDPOINT
+              value: minio:9000
+            - name: MINIO_SECURE
+              value: "0"
+            - name: MINIO_BUCKET
+              value: crypto-bot-data
+          volumeMounts:
+            - name: models-artifacts
+              mountPath: /app/artifacts
+            - name: models-data
+              mountPath: /app/data
+            - name: models-logs
+              mountPath: /app/logs
+          readinessProbe:
+            httpGet: { path: /health, port: 8010 }
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          livenessProbe:
+            httpGet: { path: /health, port: 8010 }
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 100m, memory: 512Mi }
+            limits: { cpu: 1000m, memory: 2Gi }
+      volumes:
+        - name: models-artifacts
+          persistentVolumeClaim:
+            claimName: models-artifacts
+        - name: models-data
+          emptyDir: {}
+        - name: models-logs
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: crypto-bot-ml-api
+spec:
+  selector:
+    app: crypto-bot-ml-api
+  ports:
+    - name: http
+      port: 8010
+      targetPort: 8010
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlflow-ui
+  labels:
+    app: mlflow-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlflow-ui
+  template:
+    metadata:
+      labels:
+        app: mlflow-ui
+    spec:
+      initContainers:
+        - name: wait-for-mlflow-db
+          image: postgres:14
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args:
+            - >-
+              until pg_isready -h postgres -p 5432 -U "$POSTGRES_USER" >/dev/null 2>&1 &&
+              psql -h postgres -U "$POSTGRES_USER" -d mlflow -c 'SELECT 1' >/dev/null 2>&1;
+              do echo "attente de la base mlflow..."; sleep 3; done
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef: { name: crypto-bot-secrets, key: POSTGRES_USER }
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef: { name: crypto-bot-secrets, key: POSTGRES_PWD }
+      containers:
+        - name: mlflow-ui
+          image: ml:local
+          imagePullPolicy: IfNotPresent
+          # Override via shell pour reutiliser $MLFLOW_TRACKING_URI (les $(VAR) K8s ne
+          # sont pas developpes dans args/command). Equivalent du "command:" du compose.
+          command: ["/bin/bash", "-c"]
+          args:
+            - >-
+              exec python -m mlflow ui
+              --backend-store-uri "$MLFLOW_TRACKING_URI"
+              --host 0.0.0.0 --port 5001 --workers 1
+          ports:
+            - name: http
+              containerPort: 5001
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef: { name: crypto-bot-secrets, key: POSTGRES_USER }
+            - name: POSTGRES_PWD
+              valueFrom:
+                secretKeyRef: { name: crypto-bot-secrets, key: POSTGRES_PWD }
+            - name: MLFLOW_TRACKING_URI
+              value: "postgresql+psycopg2://$(POSTGRES_USER):$(POSTGRES_PWD)@postgres:5432/mlflow"
+            - name: MLFLOW_SERVER_ENABLE_JOB_EXECUTION
+              value: "false"
+          volumeMounts:
+            - name: models-artifacts
+              mountPath: /app/artifacts
+          readinessProbe:
+            httpGet: { path: /health, port: 5001 }
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          livenessProbe:
+            httpGet: { path: /health, port: 5001 }
+            initialDelaySeconds: 40
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 100m, memory: 512Mi }
+            limits: { cpu: 1000m, memory: 1Gi }
+      volumes:
+        - name: models-artifacts
+          persistentVolumeClaim:
+            claimName: models-artifacts
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mlflow-ui
+spec:
+  selector:
+    app: mlflow-ui
+  ports:
+    - name: http
+      port: 5001
+      targetPort: 5001
