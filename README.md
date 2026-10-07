@@ -8,10 +8,10 @@ Manifests Kubernetes et configuration GitOps pour le projet **Crypto-Bot**.
 
 ```
 base/                   Manifests K8s communs (Deployments, Services, StatefulSets)
-overlays/               Patches Kustomize par environnement (dev, staging, production)
+overlays/               Patches Kustomize (dev, staging, production, local = Kind, local-monitoring = Prometheus/Grafana Kind)
 argocd/                 Applications ArgoCD (staging, production, monitoring)
-monitoring/             Stack Loki + Promtail + Grafana (SealedSecret + dashboard)
-scripts/                Scripts utilitaires (port-forward.sh, verify.sh, rotate_secrets.sh)
+monitoring/             Stack Loki + Promtail + Grafana (SealedSecret + dashboard) — cluster distant
+scripts/                Scripts utilitaires (local-up.sh, local-down.sh, local-monitoring-up.sh, local-monitoring-down.sh, port-forward.sh, verify.sh, rotate_secrets.sh)
 docs/                   Documentation
 ```
 

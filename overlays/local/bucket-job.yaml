@@ -1,0 +1,56 @@
+# Job de parite avec le service "createbuckets" de docker-compose.yml.
+# Cree le bucket S3 "crypto-bot-data" utilise par le backend et les jobs d'ingestion.
+#
+# Non strictement requis (le client applicatif auto-cree le bucket via
+# utils/connectors/minio.py:_ensure_bucket), mais conservé pour la parite Compose et
+# pour rendre l'environnement immediatement utilisable (ex: MinIO Console).
+#
+# Image : pgsty/mc (client mc, mirror maintenu de minio/mc) epinglee par digest.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-createbuckets
+  labels:
+    app: minio-createbuckets
+spec:
+  backoffLimit: 6
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app: minio-createbuckets
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: mc
+          image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z@sha256:cfc83108c3abb371f8fb84d99c1fdc88f8c237e022409b0081fb7c0a3be634dd
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              echo "Attente de MinIO..."
+              until mc alias set local http://minio:9000 "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"; do
+                echo "  MinIO indisponible, nouvel essai dans 5s";
+                sleep 5;
+              done
+              mc mb --ignore-existing local/crypto-bot-data
+              mc anonymous set download local/crypto-bot-data
+              echo "Bucket crypto-bot-data pret."
+          env:
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: crypto-bot-secrets
+                  key: MINIO_ACCESS_KEY
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: crypto-bot-secrets
+                  key: MINIO_SECRET_KEY
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "250m"

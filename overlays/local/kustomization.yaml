@@ -1,0 +1,79 @@
+# Overlay LOCAL -- cluster Kind, sans registre distant, sans ArgoCD, sans
+# Ingress, sans SealedSecrets.
+#
+#   kubectl apply -k overlays/local          (ou make/scripts local-up.sh)
+#
+# Adaptation vs overlays/dev :
+#   - Secret standard (secret.yaml) au lieu d'un SealedSecret indechiffrable ici ;
+#   - images applicatives locales (crypto-bot-backend/frontend:local, chargees par
+#     "kind load docker-image") au lieu de registry.gitlab.com (prive) ;
+#   - suppression de imagePullSecrets (gitlab-registry) et imagePullPolicy: IfNotPresent ;
+#   - image MinIO remplacee par pgsty/minio (mirror maintenu, epingle par digest) ;
+#   - Job de creation du bucket (parite avec le service createbuckets du compose).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: dev
+
+resources:
+  - ../../base
+  - namespace.yaml
+  - secret.yaml
+  - adminer.yaml
+  - bucket-job.yaml
+
+images:
+  # Images applicatives construites en local (kind load docker-image).
+  - name: registry.gitlab.com/dst_crypto/crypto-bot-app/backend
+    newName: crypto-bot-backend
+    newTag: local
+  - name: registry.gitlab.com/dst_crypto/crypto-bot-app/frontend
+    newName: crypto-bot-frontend
+    newTag: local
+  # Image MinIO officielle (quay.io) indisponible -> mirror pgsty epingle par digest.
+  # Cf. rncp_soutenance/REMEDIATION_KIND_INFRA.md section 2.
+  - name: quay.io/minio/minio
+    newName: pgsty/minio
+    newTag: RELEASE.2026-08-04T00-00-00Z
+    digest: sha256:b6bfe7239bfc83fb90d31612d9704d86039dd714f7904b3f1ad68f211e602372
+
+patches:
+  # Le registry GitLab est prive : on retire imagePullSecrets et on empeche le
+  # re-pull des images chargées dans kind (IfNotPresent au lieu d'Always).
+  # Initcontainer : le backend bascule definitivement sur le fallback SQLite s'il
+  # demarre avant PostgreSQL (USE_SQLITE_FALLBACK). On attend pg_isready avant de
+  # lancer l'app -> un deploiement a froid utilise bien PostgreSQL.
+  - target:
+      kind: Deployment
+      name: crypto-bot-backend
+    patch: |-
+      - op: remove
+        path: /spec/template/spec/imagePullSecrets
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: IfNotPresent
+      - op: add
+        path: /spec/template/spec/initContainers
+        value:
+          - name: wait-for-postgres
+            image: postgres:14
+            command: ["/bin/sh", "-c"]
+            args:
+              - >-
+                until pg_isready -h postgres -p 5432 -U "$POSTGRES_USER";
+                do echo "attente de PostgreSQL..."; sleep 2; done
+            env:
+              - name: POSTGRES_USER
+                valueFrom:
+                  secretKeyRef:
+                    name: crypto-bot-secrets
+                    key: POSTGRES_USER
+  - target:
+      kind: Deployment
+      name: crypto-bot-frontend
+    patch: |-
+      - op: remove
+        path: /spec/template/spec/imagePullSecrets
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: IfNotPresent
