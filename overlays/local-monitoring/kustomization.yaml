@@ -1,0 +1,15 @@
+# Overlay LOCAL-MONITORING -- partie Kubernetes non-Helm (namespace + secrets + dashboard).
+# La stack Prometheus/Grafana elle-meme est installee par Helm
+# (scripts/local-monitoring-up.sh, chart prometheus-community/kube-prometheus-stack).
+#
+#   kubectl apply -k overlays/local-monitoring
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: monitoring
+
+resources:
+  - namespace.yaml
+  - secret.yaml
+  - secret-postgres-creds.yaml
+  - dashboard-crypto-bot-local.yaml

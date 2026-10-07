@@ -1,0 +1,207 @@
+# Dashboard Grafana du projet (local Kind) -- infra (Prometheus) + donnees metier (PostgreSQL dev).
+# Charge automatiquement par le sidecar dashboards de kube-prometheus-stack (label grafana_dashboard).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-crypto-bot-local
+  labels:
+    grafana_dashboard: "1"
+data:
+  crypto-bot-local.json: |
+    {
+      "annotations": { "list": [] },
+      "editable": true,
+      "graphTooltip": 1,
+      "schemaVersion": 39,
+      "tags": ["crypto-bot", "local", "kind"],
+      "title": "Crypto-Bot - Projet (local Kind)",
+      "uid": "crypto-bot-local",
+      "time": { "from": "now-1h", "to": "now" },
+      "timezone": "browser",
+      "refresh": "30s",
+      "templating": { "list": [] },
+      "panels": [
+        {
+          "type": "row",
+          "title": "Applications - namespace dev (Prometheus)",
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+        },
+        {
+          "type": "stat",
+          "id": 1,
+          "title": "Pods Running (dev)",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 4, "w": 5, "x": 0, "y": 1 },
+          "targets": [
+            { "expr": "count(kube_pod_status_phase{namespace=\"dev\",phase=\"Running\"} == 1)", "refId": "A" }
+          ],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "value" },
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 4 } ] } }, "overrides": [] }
+        },
+        {
+          "type": "stat",
+          "id": 2,
+          "title": "Conteneurs (dev)",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 4, "w": 5, "x": 5, "y": 1 },
+          "targets": [
+            { "expr": "count(kube_pod_container_info{namespace=\"dev\"})", "refId": "A" }
+          ],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "value" }
+        },
+        {
+          "type": "stat",
+          "id": 3,
+          "title": "Redemarrages conteneurs (dev)",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 4, "w": 5, "x": 10, "y": 1 },
+          "targets": [
+            { "expr": "sum(kube_pod_container_status_restarts_total{namespace=\"dev\"})", "refId": "A" }
+          ],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "value" },
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 1 } ] } }, "overrides": [] }
+        },
+        {
+          "type": "stat",
+          "id": 4,
+          "title": "Cibles Prometheus UP",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 4, "w": 4, "x": 15, "y": 1 },
+          "targets": [
+            { "expr": "sum(up)", "refId": "A" }
+          ],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "value" }
+        },
+        {
+          "type": "stat",
+          "id": 5,
+          "title": "Noeuds Ready",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 4, "w": 5, "x": 19, "y": 1 },
+          "targets": [
+            { "expr": "count(kube_node_status_condition{condition=\"Ready\",status=\"true\"} == 1)", "refId": "A" }
+          ],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "value" },
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } }, "overrides": [] }
+        },
+        {
+          "type": "timeseries",
+          "id": 6,
+          "title": "Memoire par pod (dev)",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+          "targets": [
+            { "expr": "sum(container_memory_usage_bytes{namespace=\"dev\",container!=\"\"}) by (pod)", "legendFormat": "{{pod}}", "refId": "A" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+          "options": { "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["lastNotNull", "max"] } }
+        },
+        {
+          "type": "timeseries",
+          "id": 7,
+          "title": "CPU par pod (dev), cores",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
+          "targets": [
+            { "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"dev\",container!=\"\"}[5m])) by (pod)", "legendFormat": "{{pod}}", "refId": "A" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "none" }, "overrides": [] },
+          "options": { "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["lastNotNull", "max"] } }
+        },
+        {
+          "type": "row",
+          "title": "Donnees metier - PostgreSQL dev",
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 13 }
+        },
+        {
+          "type": "stat",
+          "id": 10,
+          "title": "Utilisateurs",
+          "datasource": { "type": "postgres", "uid": "crypto-bot-postgres" },
+          "gridPos": { "h": 4, "w": 5, "x": 0, "y": 14 },
+          "targets": [ { "format": "table", "rawSql": "SELECT count(*) AS utilisateurs FROM users", "refId": "A" } ],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "value" }
+        },
+        {
+          "type": "stat",
+          "id": 11,
+          "title": "Bot templates",
+          "datasource": { "type": "postgres", "uid": "crypto-bot-postgres" },
+          "gridPos": { "h": 4, "w": 5, "x": 5, "y": 14 },
+          "targets": [ { "format": "table", "rawSql": "SELECT count(*) AS templates FROM bot_templates", "refId": "A" } ],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "value" }
+        },
+        {
+          "type": "stat",
+          "id": 12,
+          "title": "Instances de bots",
+          "datasource": { "type": "postgres", "uid": "crypto-bot-postgres" },
+          "gridPos": { "h": 4, "w": 5, "x": 10, "y": 14 },
+          "targets": [ { "format": "table", "rawSql": "SELECT count(*) AS instances FROM user_bot_instances", "refId": "A" } ],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "value" }
+        },
+        {
+          "type": "stat",
+          "id": 13,
+          "title": "Ordres",
+          "datasource": { "type": "postgres", "uid": "crypto-bot-postgres" },
+          "gridPos": { "h": 4, "w": 4, "x": 15, "y": 14 },
+          "targets": [ { "format": "table", "rawSql": "SELECT count(*) AS ordres FROM orders", "refId": "A" } ],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "value" }
+        },
+        {
+          "type": "stat",
+          "id": 14,
+          "title": "Transactions",
+          "datasource": { "type": "postgres", "uid": "crypto-bot-postgres" },
+          "gridPos": { "h": 4, "w": 5, "x": 19, "y": 14 },
+          "targets": [ { "format": "table", "rawSql": "SELECT count(*) AS transactions FROM transactions", "refId": "A" } ],
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "value" }
+        },
+        {
+          "type": "table",
+          "id": 15,
+          "title": "Activite par table (PostgreSQL dev)",
+          "datasource": { "type": "postgres", "uid": "crypto-bot-postgres" },
+          "gridPos": { "h": 9, "w": 24, "x": 0, "y": 18 },
+          "targets": [
+            {
+              "format": "table",
+              "rawSql": "SELECT 'users' AS table_name, count(*) AS lignes FROM users UNION ALL SELECT 'bot_templates', count(*) FROM bot_templates UNION ALL SELECT 'user_bot_instances', count(*) FROM user_bot_instances UNION ALL SELECT 'orders', count(*) FROM orders UNION ALL SELECT 'transactions', count(*) FROM transactions UNION ALL SELECT 'trading_sessions', count(*) FROM trading_sessions UNION ALL SELECT 'market_data', count(*) FROM market_data ORDER BY lignes DESC",
+              "refId": "A"
+            }
+          ],
+          "options": { "showHeader": true, "footer": { "show": false } },
+          "fieldConfig": { "defaults": {}, "overrides": [] }
+        },
+        {
+          "type": "row",
+          "title": "Cluster Kind (Prometheus)",
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 27 }
+        },
+        {
+          "type": "timeseries",
+          "id": 20,
+          "title": "CPU cluster",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 },
+          "targets": [
+            { "expr": "1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))", "legendFormat": "usage", "refId": "A" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 }, "overrides": [] },
+          "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } }
+        },
+        {
+          "type": "timeseries",
+          "id": 21,
+          "title": "Memoire cluster",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 28 },
+          "targets": [
+            { "expr": "1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)", "legendFormat": "usage", "refId": "A" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 }, "overrides": [] },
+          "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } }
+        }
+      ]
+    }

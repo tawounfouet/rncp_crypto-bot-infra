@@ -1,0 +1,90 @@
+# Valeurs Helm kube-prometheus-stack pour un cluster Kind local (developpement).
+# Cf. rncp_soutenance/PLAN_MONITORING_LOCAL.md.
+#
+# Perimetre : Prometheus + Grafana + Alertmanager + node-exporter + kube-state-metrics
+# + kube-prometheus-operator + dashboards par defaut.
+# Hors perimetre : Loki/Promtail (logs) et dashboards projet (lies a Loki/Infinity/Postgres).
+
+grafana:
+  # Reutilise le Secret en clair cree par overlays/local-monitoring/secret.yaml
+  # (meme pattern que le cluster distant, sans SealedSecret).
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+  service:
+    type: ClusterIP
+
+  # Charge le secret grafana-postgres-creds comme variables d'env (interpolees
+  # dans la datasource ci-dessous) -- meme pattern que le cluster distant.
+  envFromSecret: grafana-postgres-creds
+
+  # Datasource Prometheus : fournie par defaut par le chart (uid "prometheus").
+  # Datasource PostgreSQL : relie Grafana aux donnees metier du namespace dev.
+  additionalDataSources:
+    - name: Postgres Dev
+      type: postgres
+      uid: crypto-bot-postgres
+      access: proxy
+      url: postgres.dev.svc.cluster.local:5432
+      database: crypto_bot_db
+      user: $DEV_POSTGRES_USER
+      secureJsonData:
+        password: $DEV_POSTGRES_PWD
+      jsonData:
+        sslmode: disable
+        postgresVersion: 1400
+
+prometheus:
+  prometheusSpec:
+    retention: 6h
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 750m
+        memory: 1Gi
+    # Selectionne les ServiceMonitor/PodMonitor/PrometheusRule de tout namespace
+    # (utile si une app expose plus tard /metrics via un ServiceMonitor).
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 20m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+
+# Cibles control-plane non scrapables sur Kind -> desactivees pour eviter
+# des cibles "down" permanentes dans Prometheus.
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
