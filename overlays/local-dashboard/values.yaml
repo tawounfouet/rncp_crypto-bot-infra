@@ -1,0 +1,31 @@
+# Valeurs Helm pour Headlamp (UI Kubernetes) en local sur Kind.
+# Installe par scripts/local-dashboard-up.sh (chart kubernetes-sigs/headlamp).
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 80
+
+# LOCAL UNIQUEMENT : authentifie tout utilisateur en tant que ServiceAccount du pod
+# -> supprime le prompt de token dans l'UI Headlamp. "Unsafe" car aucun auth par
+# utilisateur : a n'utiliser que derriere un port-forward en dev, JAMAIS en prod.
+# Sans ce flag, Headlamp demande un token (kubectl create token headlamp -n headlamp).
+config:
+  inCluster: true
+  inClusterContextName: "main"
+  unsafeUseServiceAccountToken: true
+
+# Le chart cree par defaut un ClusterRoleBinding "cluster-admin" pour son
+# ServiceAccount -> acces complet en local. En production, restreindre via
+# clusterRoleBinding.clusterRoleName (ex. un ClusterRole en lecture seule).
+clusterRoleBinding:
+  create: true
+  clusterRoleName: cluster-admin
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

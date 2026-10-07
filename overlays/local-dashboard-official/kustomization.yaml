@@ -1,0 +1,12 @@
+# Overlay LOCAL-DASHBOARD-OFFICIAL -- identite de connexion au Kubernetes Dashboard
+# officiel (kubernetes/dashboard v2.7.0). Le Dashboard est applique par le script
+# depuis le manifeste upstream ; ce kustomize n'ajoute que le ServiceAccount admin
+# et son ClusterRoleBinding.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: kubernetes-dashboard
+
+resources:
+  - admin-user.yaml
+  - token-secret.yaml
